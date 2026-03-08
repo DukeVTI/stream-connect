@@ -14,7 +14,9 @@ const FILTERS = ['All', 'Video', 'Audio', 'Trending'] as const;
 
 export default function Home() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [content, setContent] = useState<ContentWithChannel[]>([]);
+  const [liveChannels, setLiveChannels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<typeof FILTERS[number]>('All');
   const searchQuery = searchParams.get('q') || '';
