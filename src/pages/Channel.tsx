@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users, Camera, ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { uploadImage } from '@/lib/storage';
 import type { Channel as ChannelType, ContentWithChannel } from '@/types/database';
 
 export default function Channel() {
@@ -22,6 +23,12 @@ export default function Channel() {
   const [loading, setLoading] = useState(true);
   const [subLoading, setSubLoading] = useState(false);
   const [tab, setTab] = useState('all');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const bannerRef = useRef<HTMLInputElement>(null);
+
+  const isOwner = user?.id === channel?.owner_id;
 
   useEffect(() => {
     if (id) loadChannel();
@@ -79,6 +86,36 @@ export default function Channel() {
     }
   }, [user, subscribed, id, subLoading]);
 
+  const handleImageUpload = async (
+    file: File,
+    bucket: 'avatars' | 'banners',
+    field: 'avatar_url' | 'banner_url',
+    setUploading: (v: boolean) => void
+  ) => {
+    if (!user || !channel) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadImage(bucket, user.id, file);
+      if (url) {
+        await supabase.from('channels').update({ [field]: url }).eq('id', channel.id);
+        setChannel(prev => prev ? { ...prev, [field]: url } : prev);
+        toast.success(`${bucket === 'avatars' ? 'Avatar' : 'Banner'} updated!`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const filtered = tab === 'all' ? content : content.filter(c => c.content_type === tab);
 
   if (loading) {
@@ -98,23 +135,77 @@ export default function Channel() {
 
   return (
     <MainLayout>
-      <div className="h-40 bg-gradient-to-r from-primary/30 to-primary/10">
-        {channel.banner_url && <img src={channel.banner_url} className="w-full h-full object-cover" alt="" />}
+      {/* Banner with upload overlay for owner */}
+      <div className="relative h-40 bg-gradient-to-r from-primary/30 to-primary/10 group">
+        {channel.banner_url ? (
+          <img src={channel.banner_url} className="w-full h-full object-cover" alt="" />
+        ) : (
+          <div className="w-full h-full" />
+        )}
+        {isOwner && (
+          <>
+            <button
+              onClick={() => bannerRef.current?.click()}
+              disabled={uploadingBanner}
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+            >
+              <div className="flex items-center gap-2 text-white text-sm font-medium">
+                <ImageIcon className="h-5 w-5" />
+                {uploadingBanner ? 'Uploading...' : 'Change banner'}
+              </div>
+            </button>
+            <input
+              ref={bannerRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file, 'banners', 'banner_url', setUploadingBanner);
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto px-4 -mt-8">
         <div className="flex items-end gap-4 mb-6">
-          <Avatar className="h-20 w-20 border-4 border-background">
-            <AvatarImage src={channel.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{channel.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          {/* Avatar with upload overlay for owner */}
+          <div className="relative group">
+            <Avatar className="h-20 w-20 border-4 border-background">
+              <AvatarImage src={channel.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{channel.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => avatarRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                >
+                  <Camera className="h-5 w-5 text-white" />
+                </button>
+                <input
+                  ref={avatarRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(file, 'avatars', 'avatar_url', setUploadingAvatar);
+                  }}
+                />
+              </>
+            )}
+          </div>
+
           <div className="flex-1 pb-1">
             <h1 className="text-2xl font-bold">{channel.name}</h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
               <Users className="h-3.5 w-3.5" /> {subCount} subscribers
             </p>
           </div>
-          {user?.id !== channel.owner_id && (
+          {!isOwner && (
             <Button
               variant={subscribed ? 'secondary' : 'default'}
               className="rounded-full"
