@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Users, Camera, ImageIcon } from 'lucide-react';
+import { Users, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -24,9 +24,7 @@ export default function Channel() {
   const [subLoading, setSubLoading] = useState(false);
   const [tab, setTab] = useState('all');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
   const avatarRef = useRef<HTMLInputElement>(null);
-  const bannerRef = useRef<HTMLInputElement>(null);
 
   const isOwner = user?.id === channel?.owner_id;
 
@@ -135,40 +133,7 @@ export default function Channel() {
 
   return (
     <MainLayout>
-      {/* Banner with upload overlay for owner */}
-      <div className="relative h-40 bg-gradient-to-r from-primary/30 to-primary/10 group">
-        {channel.banner_url ? (
-          <img src={channel.banner_url} className="w-full h-full object-cover" alt="" />
-        ) : (
-          <div className="w-full h-full" />
-        )}
-        {isOwner && (
-          <>
-            <button
-              onClick={() => bannerRef.current?.click()}
-              disabled={uploadingBanner}
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
-            >
-              <div className="flex items-center gap-2 text-white text-sm font-medium">
-                <ImageIcon className="h-5 w-5" />
-                {uploadingBanner ? 'Uploading...' : 'Change banner'}
-              </div>
-            </button>
-            <input
-              ref={bannerRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file, 'banners', 'banner_url', setUploadingBanner);
-              }}
-            />
-          </>
-        )}
-      </div>
-
-      <div className="max-w-6xl mx-auto px-4 -mt-8">
+      <div className="max-w-6xl mx-auto px-4 pt-6">
         <div className="flex items-end gap-4 mb-6">
           {/* Avatar with upload overlay for owner */}
           <div className="relative group">
