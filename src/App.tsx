@@ -15,6 +15,7 @@ import Channel from "./pages/Channel";
 import Profile from "./pages/Profile";
 import Subscriptions from "./pages/Subscriptions";
 import Admin from "./pages/Admin";
+import Live from "./pages/Live";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
