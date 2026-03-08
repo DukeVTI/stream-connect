@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_live: boolean
           name: string
           owner_id: string
           subscriber_count: number
@@ -32,6 +33,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_live?: boolean
           name: string
           owner_id: string
           subscriber_count?: number
@@ -43,6 +45,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_live?: boolean
           name?: string
           owner_id?: string
           subscriber_count?: number
@@ -220,6 +223,82 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      live_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "live_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_sessions: {
+        Row: {
+          channel_id: string
+          creator_id: string
+          ended_at: string | null
+          id: string
+          livekit_room_name: string
+          started_at: string
+          status: string
+          title: string
+          viewer_count: number
+        }
+        Insert: {
+          channel_id: string
+          creator_id: string
+          ended_at?: string | null
+          id?: string
+          livekit_room_name: string
+          started_at?: string
+          status?: string
+          title: string
+          viewer_count?: number
+        }
+        Update: {
+          channel_id?: string
+          creator_id?: string
+          ended_at?: string | null
+          id?: string
+          livekit_room_name?: string
+          started_at?: string
+          status?: string
+          title?: string
+          viewer_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
           },
         ]
       }
