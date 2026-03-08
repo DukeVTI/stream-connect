@@ -1,4 +1,4 @@
-import { Home, Rss, Library, LayoutDashboard, Upload, Sun, Moon, Monitor } from 'lucide-react';
+import { Home, Rss, LayoutDashboard, Upload, Shield, Sun, Moon, Monitor } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
