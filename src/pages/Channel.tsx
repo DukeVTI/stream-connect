@@ -181,10 +181,11 @@ export default function Channel() {
               {subscribed ? 'Subscribed' : 'Subscribe'}
             </Button>
           )}
+        {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
         </div>
+      </div>
 
-        {channel.description && <p className="text-sm text-muted-foreground mb-6">{channel.description}</p>}
-
+      <div className="max-w-6xl mx-auto px-4 pt-6">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
