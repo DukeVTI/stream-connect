@@ -22,8 +22,11 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ views: 0, subscribers: 0, content: 0 });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [goLiveOpen, setGoLiveOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const [goLiveData, setGoLiveData] = useState({ channelId: '', title: '' });
+  const [goingLive, setGoingLive] = useState(false);
 
   useEffect(() => {
     if (user) loadData();
