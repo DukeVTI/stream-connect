@@ -133,7 +133,8 @@ export default function Channel() {
 
   return (
     <MainLayout>
-      <div className="max-w-6xl mx-auto px-4 pt-6">
+      <div className="border-b border-border/50 bg-gradient-to-b from-primary/5 to-transparent pb-6">
+        <div className="max-w-6xl mx-auto px-4 pt-8">
         <div className="flex items-end gap-4 mb-6">
           {/* Avatar with upload overlay for owner */}
           <div className="relative group">
@@ -181,9 +182,11 @@ export default function Channel() {
             </Button>
           )}
         </div>
+        {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
+        </div>
+      </div>
 
-        {channel.description && <p className="text-sm text-muted-foreground mb-6">{channel.description}</p>}
-
+      <div className="max-w-6xl mx-auto px-4 pt-6">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
