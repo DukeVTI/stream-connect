@@ -75,6 +75,43 @@ export default function Home() {
           ))}
         </div>
 
+        {/* Live Now Section */}
+        {liveChannels.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Radio className="h-4 w-4 text-destructive" />
+              <h2 className="text-lg font-semibold">Live Now</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {liveChannels.map((session) => (
+                <Card
+                  key={session.id}
+                  className="cursor-pointer hover:border-destructive/50 transition-colors"
+                  onClick={() => navigate(`/live/${session.id}`)}
+                >
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center text-destructive font-bold shrink-0">
+                        {session.channels?.name?.charAt(0) ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <LiveBadge />
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Users className="h-3 w-3" /> {session.viewer_count}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium truncate">{session.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{session.channels?.name}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {searchQuery && (
           <p className="text-muted-foreground mb-4">
             Results for "<span className="text-foreground font-medium">{searchQuery}</span>"
