@@ -69,14 +69,14 @@ export default function Watch() {
   const loadComments = async () => {
     const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles:user_id(display_name, avatar_url)')
+      .select('*, profiles!comments_user_id_fkey(display_name, avatar_url)')
       .eq('content_id', id!)
       .order('created_at', { ascending: false });
     if (error) {
       toast.error('Failed to load comments');
       return;
     }
-    setComments((data as CommentWithProfile[]) ?? []);
+    setComments((data as unknown as CommentWithProfile[]) ?? []);
   };
 
   const handleLike = useCallback(async () => {

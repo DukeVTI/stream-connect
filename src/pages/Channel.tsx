@@ -41,7 +41,7 @@ export default function Channel() {
     if (user) {
       promises.push(
         supabase.from('subscriptions').select('id').eq('channel_id', id!).eq('user_id', user.id).maybeSingle()
-          .then(({ data: subData }) => { setSubscribed(!!subData); })
+          .then(({ data: subData }) => { setSubscribed(!!subData); }) as unknown as Promise<void>
       );
     }
     await Promise.all(promises);
