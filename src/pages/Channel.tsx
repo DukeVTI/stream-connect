@@ -181,7 +181,6 @@ export default function Channel() {
               {subscribed ? 'Subscribed' : 'Subscribe'}
             </Button>
           )}
-          )}
         </div>
         {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
         </div>
