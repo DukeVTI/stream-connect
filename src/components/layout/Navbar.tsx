@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Upload, User, LogOut, LayoutDashboard, Menu } from 'lucide-react';
+import { Search, Upload, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
@@ -28,13 +29,16 @@ export function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-4 px-4">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl shrink-0" style={{ fontFamily: 'Space Grotesk' }}>
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-            B
-          </div>
-          <span className="hidden sm:inline">BCR</span>
-        </Link>
+        {/* Sidebar trigger + Logo */}
+        <div className="flex items-center gap-2 shrink-0">
+          <SidebarTrigger className="-ml-1" />
+          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+              B
+            </div>
+            <span className="hidden sm:inline">BCR</span>
+          </Link>
+        </div>
 
         {/* Search */}
         <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-auto">
