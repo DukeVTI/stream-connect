@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Users, Film, Trash2 } from 'lucide-react';
+import { Plus, Eye, Users, Film, Trash2, Radio } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LiveBadge } from '@/components/live/LiveBadge';
 import { toast } from 'sonner';
 import type { Channel } from '@/types/database';
 
@@ -20,8 +22,11 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ views: 0, subscribers: 0, content: 0 });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [goLiveOpen, setGoLiveOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const [goLiveData, setGoLiveData] = useState({ channelId: '', title: '' });
+  const [goingLive, setGoingLive] = useState(false);
 
   useEffect(() => {
     if (user) loadData();
@@ -76,14 +81,78 @@ export default function Dashboard() {
     }
   };
 
+  const goLive = async () => {
+    if (!user || !goLiveData.channelId || !goLiveData.title.trim() || goingLive) return;
+    setGoingLive(true);
+
+    const roomName = `live-${goLiveData.channelId}-${Date.now()}`;
+    const { data: session, error } = await supabase
+      .from('live_sessions')
+      .insert({
+        channel_id: goLiveData.channelId,
+        creator_id: user.id,
+        title: goLiveData.title.trim(),
+        livekit_room_name: roomName,
+      })
+      .select()
+      .single();
+
+    if (error || !session) {
+      toast.error(error?.message || 'Failed to start stream');
+      setGoingLive(false);
+      return;
+    }
+
+    await supabase.from('channels').update({ is_live: true }).eq('id', goLiveData.channelId);
+
+    setGoLiveOpen(false);
+    setGoLiveData({ channelId: '', title: '' });
+    setGoingLive(false);
+    navigate(`/live/${session.id}`);
+  };
+
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Creator Dashboard</h1>
-          <Button onClick={() => navigate('/upload')}>
-            <Plus className="h-4 w-4 mr-2" /> Upload Content
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={goLiveOpen} onOpenChange={setGoLiveOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" disabled={channels.length === 0}>
+                  <Radio className="h-4 w-4 mr-2" /> Go Live
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Start a Livestream</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Channel</Label>
+                    <Select value={goLiveData.channelId} onValueChange={(v) => setGoLiveData((p) => ({ ...p, channelId: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select a channel" /></SelectTrigger>
+                      <SelectContent>
+                        {channels.map((ch) => (
+                          <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stream Title</Label>
+                    <Input value={goLiveData.title} onChange={(e) => setGoLiveData((p) => ({ ...p, title: e.target.value }))} placeholder="What are you streaming?" />
+                  </div>
+                  <Button onClick={goLive} className="w-full" variant="destructive" disabled={goingLive || !goLiveData.channelId || !goLiveData.title.trim()}>
+                    {goingLive ? 'Starting...' : 'Go Live'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={() => navigate('/upload')}>
+              <Plus className="h-4 w-4 mr-2" /> Upload Content
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -173,7 +242,10 @@ export default function Dashboard() {
                         {ch.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{ch.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{ch.name}</h3>
+                          {ch.is_live && <LiveBadge />}
+                        </div>
                         <p className="text-sm text-muted-foreground">{ch.subscriber_count} subscribers</p>
                       </div>
                     </div>

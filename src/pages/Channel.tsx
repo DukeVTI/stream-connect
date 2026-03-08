@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { Users, Camera } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Users, Camera, Radio } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -11,10 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { uploadImage } from '@/lib/storage';
+import { LiveBadge } from '@/components/live/LiveBadge';
 import type { Channel as ChannelType, ContentWithChannel } from '@/types/database';
 
 export default function Channel() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [content, setContent] = useState<ContentWithChannel[]>([]);
@@ -24,6 +26,7 @@ export default function Channel() {
   const [subLoading, setSubLoading] = useState(false);
   const [tab, setTab] = useState('all');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
 
   const isOwner = user?.id === channel?.owner_id;
@@ -49,6 +52,11 @@ export default function Channel() {
           .then(({ data: subData }) => { setSubscribed(!!subData); }) as unknown as Promise<void>
       );
     }
+    // Check if live
+    promises.push(
+      supabase.from('live_sessions').select('id').eq('channel_id', id!).eq('status', 'live').limit(1).maybeSingle()
+        .then(({ data: liveData }) => { setLiveSessionId(liveData?.id ?? null); }) as unknown as Promise<void>
+    );
     await Promise.all(promises);
     setLoading(false);
   };
@@ -183,6 +191,23 @@ export default function Channel() {
           )}
         </div>
         {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
+
+        {/* Live banner */}
+        {liveSessionId && (
+          <div
+            className="mt-4 flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-lg p-3 cursor-pointer hover:bg-destructive/20 transition-colors"
+            onClick={() => navigate(`/live/${liveSessionId}`)}
+          >
+            <Radio className="h-5 w-5 text-destructive animate-pulse" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Currently Live</span>
+                <LiveBadge />
+              </div>
+              <p className="text-xs text-muted-foreground">Click to watch the livestream</p>
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
