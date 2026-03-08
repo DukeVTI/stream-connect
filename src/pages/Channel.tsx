@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { uploadImage } from '@/lib/storage';
+import { LiveBadge } from '@/components/live/LiveBadge';
 import type { Channel as ChannelType, ContentWithChannel } from '@/types/database';
 
 export default function Channel() {
