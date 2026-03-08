@@ -23,7 +23,18 @@ export default function Home() {
 
   useEffect(() => {
     loadContent();
+    loadLiveChannels();
   }, [filter, searchQuery]);
+
+  const loadLiveChannels = async () => {
+    const { data } = await supabase
+      .from('live_sessions')
+      .select('id, title, viewer_count, channels(id, name, avatar_url)')
+      .eq('status', 'live')
+      .order('started_at', { ascending: false })
+      .limit(10);
+    setLiveChannels(data ?? []);
+  };
 
   const loadContent = async () => {
     setLoading(true);
