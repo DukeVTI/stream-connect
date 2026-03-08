@@ -40,6 +40,19 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, profile } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      import('@/integrations/supabase/client').then(({ supabase }) => {
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }).then(({ data }) => {
+          setIsAdmin(!!data);
+        });
+      });
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   const isActive = (path: string) => location.pathname === path;
 
