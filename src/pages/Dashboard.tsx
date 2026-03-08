@@ -81,6 +81,36 @@ export default function Dashboard() {
     }
   };
 
+  const goLive = async () => {
+    if (!user || !goLiveData.channelId || !goLiveData.title.trim() || goingLive) return;
+    setGoingLive(true);
+
+    const roomName = `live-${goLiveData.channelId}-${Date.now()}`;
+    const { data: session, error } = await supabase
+      .from('live_sessions')
+      .insert({
+        channel_id: goLiveData.channelId,
+        creator_id: user.id,
+        title: goLiveData.title.trim(),
+        livekit_room_name: roomName,
+      })
+      .select()
+      .single();
+
+    if (error || !session) {
+      toast.error(error?.message || 'Failed to start stream');
+      setGoingLive(false);
+      return;
+    }
+
+    await supabase.from('channels').update({ is_live: true }).eq('id', goLiveData.channelId);
+
+    setGoLiveOpen(false);
+    setGoLiveData({ channelId: '', title: '' });
+    setGoingLive(false);
+    navigate(`/live/${session.id}`);
+  };
+
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 py-6">
