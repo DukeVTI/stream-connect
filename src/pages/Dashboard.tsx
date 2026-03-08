@@ -116,9 +116,43 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Creator Dashboard</h1>
-          <Button onClick={() => navigate('/upload')}>
-            <Plus className="h-4 w-4 mr-2" /> Upload Content
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={goLiveOpen} onOpenChange={setGoLiveOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" disabled={channels.length === 0}>
+                  <Radio className="h-4 w-4 mr-2" /> Go Live
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Start a Livestream</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label>Channel</Label>
+                    <Select value={goLiveData.channelId} onValueChange={(v) => setGoLiveData((p) => ({ ...p, channelId: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select a channel" /></SelectTrigger>
+                      <SelectContent>
+                        {channels.map((ch) => (
+                          <SelectItem key={ch.id} value={ch.id}>{ch.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Stream Title</Label>
+                    <Input value={goLiveData.title} onChange={(e) => setGoLiveData((p) => ({ ...p, title: e.target.value }))} placeholder="What are you streaming?" />
+                  </div>
+                  <Button onClick={goLive} className="w-full" variant="destructive" disabled={goingLive || !goLiveData.channelId || !goLiveData.title.trim()}>
+                    {goingLive ? 'Starting...' : 'Go Live'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={() => navigate('/upload')}>
+              <Plus className="h-4 w-4 mr-2" /> Upload Content
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
