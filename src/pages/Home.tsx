@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ContentCard } from '@/components/content/ContentCard';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+import { LiveBadge } from '@/components/live/LiveBadge';
+import { Radio, Users } from 'lucide-react';
 import type { ContentWithChannel } from '@/types/database';
 
 const FILTERS = ['All', 'Video', 'Audio', 'Trending'] as const;
