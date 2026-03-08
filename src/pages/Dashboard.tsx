@@ -242,7 +242,10 @@ export default function Dashboard() {
                         {ch.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-semibold">{ch.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{ch.name}</h3>
+                          {ch.is_live && <LiveBadge />}
+                        </div>
                         <p className="text-sm text-muted-foreground">{ch.subscriber_count} subscribers</p>
                       </div>
                     </div>

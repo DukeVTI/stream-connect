@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+              <Route path="/live/:sessionId" element={<Live />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
