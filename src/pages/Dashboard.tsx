@@ -1,82 +1,86 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Users, Film, Trash2, Edit } from 'lucide-react';
+import { Plus, Eye, Users, Film, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import type { Channel } from '@/types/database';
 
 export default function Dashboard() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [channels, setChannels] = useState<any[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [stats, setStats] = useState({ views: 0, subscribers: 0, content: 0 });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ name: '', description: '' });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!user) { navigate('/auth'); return; }
-    if (profile && !profile.is_creator) {
-      // Auto-enable creator mode
-      enableCreator();
-    }
-    loadData();
-  }, [user, profile]);
-
-  const enableCreator = async () => {
-    if (!user) return;
-    await supabase.from('profiles').update({ is_creator: true }).eq('user_id', user.id);
-    await refreshProfile();
-  };
+    if (user) loadData();
+  }, [user]);
 
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
 
-    const { data: channelData } = await supabase.from('channels').select('*').eq('owner_id', user.id);
-    setChannels(channelData ?? []);
+    const [channelRes, contentRes] = await Promise.all([
+      supabase.from('channels').select('*').eq('owner_id', user.id),
+      supabase.from('content').select('view_count').eq('creator_id', user.id),
+    ]);
 
-    const totalSubs = (channelData ?? []).reduce((sum, ch) => sum + ch.subscriber_count, 0);
-    const { data: contentData } = await supabase.from('content').select('view_count').eq('creator_id', user.id);
-    const totalViews = (contentData ?? []).reduce((sum, c) => sum + c.view_count, 0);
+    const channelData = channelRes.data ?? [];
+    setChannels(channelData);
 
-    setStats({ views: totalViews, subscribers: totalSubs, content: contentData?.length ?? 0 });
+    const totalSubs = channelData.reduce((sum, ch) => sum + ch.subscriber_count, 0);
+    const totalViews = (contentRes.data ?? []).reduce((sum, c) => sum + c.view_count, 0);
+
+    setStats({ views: totalViews, subscribers: totalSubs, content: contentRes.data?.length ?? 0 });
     setLoading(false);
   };
 
   const createChannel = async () => {
-    if (!user || !newChannel.name.trim()) return;
+    if (!user || !newChannel.name.trim() || creating) return;
+    setCreating(true);
     const { error } = await supabase.from('channels').insert({
       owner_id: user.id,
       name: newChannel.name.trim(),
       description: newChannel.description.trim() || null,
     });
-    if (error) { toast.error(error.message); return; }
-    toast.success('Channel created!');
-    setNewChannel({ name: '', description: '' });
-    setDialogOpen(false);
-    loadData();
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Channel created!');
+      setNewChannel({ name: '', description: '' });
+      setDialogOpen(false);
+      loadData();
+    }
+    setCreating(false);
   };
 
   const deleteChannel = async (channelId: string) => {
     if (!confirm('Delete this channel and all its content?')) return;
-    await supabase.from('channels').delete().eq('id', channelId);
-    toast.success('Channel deleted');
-    loadData();
+    const { error } = await supabase.from('channels').delete().eq('id', channelId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Channel deleted');
+      loadData();
+    }
   };
 
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk' }}>Creator Dashboard</h1>
+          <h1 className="text-2xl font-bold">Creator Dashboard</h1>
           <Button onClick={() => navigate('/upload')}>
             <Plus className="h-4 w-4 mr-2" /> Upload Content
           </Button>
@@ -121,7 +125,7 @@ export default function Dashboard() {
 
         {/* Channels */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ fontFamily: 'Space Grotesk' }}>Your Channels</h2>
+          <h2 className="text-lg font-semibold">Your Channels</h2>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" /> New Channel</Button>
@@ -139,13 +143,17 @@ export default function Dashboard() {
                   <Label>Description</Label>
                   <Textarea value={newChannel.description} onChange={e => setNewChannel(p => ({ ...p, description: e.target.value }))} placeholder="What's this channel about?" />
                 </div>
-                <Button onClick={createChannel} className="w-full">Create</Button>
+                <Button onClick={createChannel} className="w-full" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        {channels.length === 0 ? (
+        {loading ? (
+          <p className="text-muted-foreground text-center py-12">Loading...</p>
+        ) : channels.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">You haven't created any channels yet</p>
