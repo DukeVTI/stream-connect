@@ -26,6 +26,7 @@ export default function Channel() {
   const [subLoading, setSubLoading] = useState(false);
   const [tab, setTab] = useState('all');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
 
   const isOwner = user?.id === channel?.owner_id;
