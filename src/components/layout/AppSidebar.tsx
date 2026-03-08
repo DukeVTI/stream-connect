@@ -117,6 +117,36 @@ export function AppSidebar() {
             </SidebarGroup>
           </>
         )}
+
+        {isAdmin && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground">Admin</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/admin')}
+                      tooltip={collapsed ? 'Admin' : undefined}
+                    >
+                      <NavLink
+                        to="/admin"
+                        end
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent"
+                        activeClassName="bg-accent text-accent-foreground font-medium"
+                      >
+                        <Shield className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span>Admin</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-3">
