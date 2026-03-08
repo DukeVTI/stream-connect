@@ -83,6 +83,13 @@ export type Database = {
             referencedRelation: "content"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "comments_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       content: {
@@ -174,6 +181,13 @@ export type Database = {
             referencedRelation: "content"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "likes_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       profiles: {
@@ -236,6 +250,13 @@ export type Database = {
             referencedRelation: "channels"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscriptions_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
     }
@@ -243,7 +264,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrement_like_count: {
+        Args: { _content_id: string }
+        Returns: undefined
+      }
+      increment_like_count: {
+        Args: { _content_id: string }
+        Returns: undefined
+      }
+      increment_view_count: {
+        Args: { _content_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

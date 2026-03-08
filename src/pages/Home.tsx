@@ -5,20 +5,7 @@ import { ContentCard } from '@/components/content/ContentCard';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type ContentWithChannel = {
-  id: string;
-  title: string;
-  thumbnail_url: string | null;
-  content_type: 'video' | 'audio';
-  view_count: number;
-  created_at: string;
-  channels: {
-    id: string;
-    name: string;
-    avatar_url: string | null;
-  };
-};
+import type { ContentWithChannel } from '@/types/database';
 
 const FILTERS = ['All', 'Video', 'Audio', 'Trending'] as const;
 
@@ -37,7 +24,7 @@ export default function Home() {
     setLoading(true);
     let query = supabase
       .from('content')
-      .select('id, title, thumbnail_url, content_type, view_count, created_at, channels(id, name, avatar_url)')
+      .select('id, title, thumbnail_url, content_type, view_count, created_at, channel_id, creator_id, like_count, status, category, description, duration, file_url, updated_at, channels(id, name, avatar_url)')
       .eq('status', 'published');
 
     if (filter === 'Video') query = query.eq('content_type', 'video');
@@ -47,15 +34,17 @@ export default function Home() {
 
     query = query.order('created_at', { ascending: false }).limit(50);
 
-    const { data } = await query;
-    setContent((data as any) ?? []);
+    const { data, error } = await query;
+    if (error) {
+      console.error('Failed to load content:', error);
+    }
+    setContent((data as ContentWithChannel[]) ?? []);
     setLoading(false);
   };
 
   return (
     <MainLayout>
       <div className="px-4 py-6 max-w-7xl mx-auto">
-        {/* Filter tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {FILTERS.map((f) => (
             <Button
@@ -76,7 +65,6 @@ export default function Home() {
           </p>
         )}
 
-        {/* Content grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -94,7 +82,7 @@ export default function Home() {
           </div>
         ) : content.length === 0 ? (
           <div className="text-center py-20">
-            <h2 className="text-xl font-semibold mb-2" style={{ fontFamily: 'Space Grotesk' }}>No content yet</h2>
+            <h2 className="text-xl font-semibold mb-2">No content yet</h2>
             <p className="text-muted-foreground">Be the first to upload something!</p>
           </div>
         ) : (
@@ -105,7 +93,7 @@ export default function Home() {
                 id={item.id}
                 title={item.title}
                 thumbnailUrl={item.thumbnail_url}
-                contentType={item.content_type}
+                contentType={item.content_type as 'video' | 'audio'}
                 viewCount={item.view_count}
                 createdAt={item.created_at}
                 channelName={item.channels?.name ?? 'Unknown'}

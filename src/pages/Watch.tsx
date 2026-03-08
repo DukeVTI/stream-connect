@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ThumbsUp, MessageSquare, Eye, Share2, Headphones } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,17 +10,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import type { ContentWithFullChannel, CommentWithProfile } from '@/types/database';
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const [content, setContent] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [content, setContent] = useState<ContentWithFullChannel | null>(null);
+  const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) loadContent();
@@ -28,78 +30,113 @@ export default function Watch() {
 
   const loadContent = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('content')
       .select('*, channels(id, name, avatar_url, subscriber_count, owner_id)')
       .eq('id', id!)
       .single();
 
-    if (data) {
-      setContent(data);
-      setLikeCount(data.like_count);
-      // Increment view
-      await supabase.from('content').update({ view_count: data.view_count + 1 }).eq('id', id!);
-      loadComments();
-      if (user) {
-        // Check like
-        const { data: likeData } = await supabase.from('likes').select('id').eq('content_id', id!).eq('user_id', user.id).maybeSingle();
-        setLiked(!!likeData);
-        // Check subscription
-        if (data.channels) {
-          const { data: subData } = await supabase.from('subscriptions').select('id').eq('channel_id', data.channels.id).eq('user_id', user.id).maybeSingle();
-          setSubscribed(!!subData);
-        }
-      }
+    if (error || !data) {
+      setLoading(false);
+      return;
     }
+
+    setContent(data as ContentWithFullChannel);
+    setLikeCount(data.like_count);
+
+    // Atomic view increment
+    await supabase.rpc('increment_view_count', { _content_id: id! });
+
+    // Parallel: load comments + check user state
+    const promises: Promise<void>[] = [loadComments()];
+    if (user && data.channels) {
+      promises.push(checkUserState(data.channels.id));
+    }
+    await Promise.all(promises);
     setLoading(false);
   };
 
+  const checkUserState = async (channelId: string) => {
+    if (!user) return;
+    const [likeRes, subRes] = await Promise.all([
+      supabase.from('likes').select('id').eq('content_id', id!).eq('user_id', user.id).maybeSingle(),
+      supabase.from('subscriptions').select('id').eq('channel_id', channelId).eq('user_id', user.id).maybeSingle(),
+    ]);
+    setLiked(!!likeRes.data);
+    setSubscribed(!!subRes.data);
+  };
+
   const loadComments = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles:user_id(display_name, avatar_url)')
+      .select('*, profiles:comments_user_id_profiles_fkey(display_name, avatar_url)')
       .eq('content_id', id!)
       .order('created_at', { ascending: false });
-    setComments(data ?? []);
+    if (error) {
+      toast.error('Failed to load comments');
+      return;
+    }
+    setComments((data as unknown as CommentWithProfile[]) ?? []);
   };
 
-  const handleLike = async () => {
+  const handleLike = useCallback(async () => {
     if (!user) return toast.error('Sign in to like');
-    if (liked) {
-      await supabase.from('likes').delete().eq('content_id', id!).eq('user_id', user.id);
-      setLiked(false);
-      setLikeCount((c) => c - 1);
-      await supabase.from('content').update({ like_count: likeCount - 1 }).eq('id', id!);
-    } else {
-      await supabase.from('likes').insert({ content_id: id!, user_id: user.id });
-      setLiked(true);
-      setLikeCount((c) => c + 1);
-      await supabase.from('content').update({ like_count: likeCount + 1 }).eq('id', id!);
+    if (actionLoading) return;
+    setActionLoading('like');
+    try {
+      if (liked) {
+        await supabase.from('likes').delete().eq('content_id', id!).eq('user_id', user.id);
+        await supabase.rpc('decrement_like_count', { _content_id: id! });
+        setLiked(false);
+        setLikeCount((c) => Math.max(c - 1, 0));
+      } else {
+        await supabase.from('likes').insert({ content_id: id!, user_id: user.id });
+        await supabase.rpc('increment_like_count', { _content_id: id! });
+        setLiked(true);
+        setLikeCount((c) => c + 1);
+      }
+    } catch {
+      toast.error('Action failed');
+    } finally {
+      setActionLoading(null);
     }
-  };
+  }, [user, liked, id, actionLoading]);
 
-  const handleComment = async () => {
+  const handleComment = useCallback(async () => {
     if (!user) return toast.error('Sign in to comment');
-    if (!commentText.trim()) return;
-    await supabase.from('comments').insert({ content_id: id!, user_id: user.id, body: commentText.trim() });
-    setCommentText('');
-    loadComments();
-    toast.success('Comment added');
-  };
-
-  const handleSubscribe = async () => {
-    if (!user) return toast.error('Sign in to subscribe');
-    if (!content?.channels) return;
-    if (subscribed) {
-      await supabase.from('subscriptions').delete().eq('channel_id', content.channels.id).eq('user_id', user.id);
-      setSubscribed(false);
-      toast.success('Unsubscribed');
+    if (!commentText.trim() || actionLoading) return;
+    setActionLoading('comment');
+    const { error } = await supabase.from('comments').insert({ content_id: id!, user_id: user.id, body: commentText.trim() });
+    if (error) {
+      toast.error('Failed to post comment');
     } else {
-      await supabase.from('subscriptions').insert({ channel_id: content.channels.id, user_id: user.id });
-      setSubscribed(true);
-      toast.success('Subscribed!');
+      setCommentText('');
+      loadComments();
+      toast.success('Comment added');
     }
-  };
+    setActionLoading(null);
+  }, [user, commentText, id, actionLoading]);
+
+  const handleSubscribe = useCallback(async () => {
+    if (!user) return toast.error('Sign in to subscribe');
+    if (!content?.channels || actionLoading) return;
+    setActionLoading('subscribe');
+    try {
+      if (subscribed) {
+        await supabase.from('subscriptions').delete().eq('channel_id', content.channels.id).eq('user_id', user.id);
+        setSubscribed(false);
+        toast.success('Unsubscribed');
+      } else {
+        await supabase.from('subscriptions').insert({ channel_id: content.channels.id, user_id: user.id });
+        setSubscribed(true);
+        toast.success('Subscribed!');
+      }
+    } catch {
+      toast.error('Action failed');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [user, content, subscribed, actionLoading]);
 
   if (loading) {
     return (
@@ -143,12 +180,12 @@ export default function Watch() {
         </div>
 
         {/* Title & Actions */}
-        <h1 className="text-xl font-bold mb-2" style={{ fontFamily: 'Space Grotesk' }}>{content.title}</h1>
+        <h1 className="text-xl font-bold mb-2">{content.title}</h1>
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <Link to={`/channel/${content.channels?.id}`}>
               <Avatar className="h-10 w-10">
-                <AvatarImage src={content.channels?.avatar_url} />
+                <AvatarImage src={content.channels?.avatar_url ?? undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground">{content.channels?.name?.charAt(0)}</AvatarFallback>
               </Avatar>
             </Link>
@@ -157,13 +194,25 @@ export default function Watch() {
               <p className="text-xs text-muted-foreground">{content.channels?.subscriber_count} subscribers</p>
             </div>
             {user?.id !== content.channels?.owner_id && (
-              <Button variant={subscribed ? 'secondary' : 'default'} size="sm" className="rounded-full ml-2" onClick={handleSubscribe}>
+              <Button
+                variant={subscribed ? 'secondary' : 'default'}
+                size="sm"
+                className="rounded-full ml-2"
+                onClick={handleSubscribe}
+                disabled={actionLoading === 'subscribe'}
+              >
                 {subscribed ? 'Subscribed' : 'Subscribe'}
               </Button>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant={liked ? 'default' : 'secondary'} size="sm" className="rounded-full" onClick={handleLike}>
+            <Button
+              variant={liked ? 'default' : 'secondary'}
+              size="sm"
+              className="rounded-full"
+              onClick={handleLike}
+              disabled={actionLoading === 'like'}
+            >
               <ThumbsUp className="h-4 w-4 mr-1" /> {likeCount}
             </Button>
             <Button variant="secondary" size="sm" className="rounded-full" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }}>
@@ -185,7 +234,7 @@ export default function Watch() {
 
         {/* Comments */}
         <div className="space-y-4">
-          <h2 className="font-semibold flex items-center gap-2" style={{ fontFamily: 'Space Grotesk' }}>
+          <h2 className="font-semibold flex items-center gap-2">
             <MessageSquare className="h-5 w-5" /> {comments.length} Comments
           </h2>
 
@@ -197,7 +246,9 @@ export default function Watch() {
                 onChange={(e) => setCommentText(e.target.value)}
                 className="min-h-[80px]"
               />
-              <Button onClick={handleComment} disabled={!commentText.trim()} className="self-end">Post</Button>
+              <Button onClick={handleComment} disabled={!commentText.trim() || actionLoading === 'comment'} className="self-end">
+                {actionLoading === 'comment' ? 'Posting...' : 'Post'}
+              </Button>
             </div>
           )}
 
@@ -205,7 +256,7 @@ export default function Watch() {
             {comments.map((comment) => (
               <div key={comment.id} className="flex gap-3">
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarImage src={comment.profiles?.avatar_url} />
+                  <AvatarImage src={comment.profiles?.avatar_url ?? undefined} />
                   <AvatarFallback className="bg-muted text-xs">{comment.profiles?.display_name?.charAt(0) ?? '?'}</AvatarFallback>
                 </Avatar>
                 <div>
