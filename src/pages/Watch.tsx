@@ -69,7 +69,7 @@ export default function Watch() {
   const loadComments = async () => {
     const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles!comments_user_id_fkey(display_name, avatar_url)')
+      .select('*, profiles:comments_user_id_profiles_fkey(display_name, avatar_url)')
       .eq('content_id', id!)
       .order('created_at', { ascending: false });
     if (error) {
