@@ -191,6 +191,23 @@ export default function Channel() {
           )}
         </div>
         {channel.description && <p className="text-sm text-muted-foreground">{channel.description}</p>}
+
+        {/* Live banner */}
+        {liveSessionId && (
+          <div
+            className="mt-4 flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-lg p-3 cursor-pointer hover:bg-destructive/20 transition-colors"
+            onClick={() => navigate(`/live/${liveSessionId}`)}
+          >
+            <Radio className="h-5 w-5 text-destructive animate-pulse" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Currently Live</span>
+                <LiveBadge />
+              </div>
+              <p className="text-xs text-muted-foreground">Click to watch the livestream</p>
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
