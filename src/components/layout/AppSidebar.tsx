@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Home, Rss, LayoutDashboard, Upload, Shield, Sun, Moon, Monitor } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   Sidebar,
