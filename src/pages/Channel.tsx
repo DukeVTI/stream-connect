@@ -52,6 +52,11 @@ export default function Channel() {
           .then(({ data: subData }) => { setSubscribed(!!subData); }) as unknown as Promise<void>
       );
     }
+    // Check if live
+    promises.push(
+      supabase.from('live_sessions').select('id').eq('channel_id', id!).eq('status', 'live').limit(1).maybeSingle()
+        .then(({ data: liveData }) => { setLiveSessionId(liveData?.id ?? null); }) as unknown as Promise<void>
+    );
     await Promise.all(promises);
     setLoading(false);
   };
