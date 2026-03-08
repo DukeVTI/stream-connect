@@ -14,6 +14,7 @@ import Upload from "./pages/Upload";
 import Channel from "./pages/Channel";
 import Profile from "./pages/Profile";
 import Subscriptions from "./pages/Subscriptions";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/channel/:id" element={<Channel />} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

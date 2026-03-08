@@ -1,7 +1,9 @@
-import { Home, Rss, Library, LayoutDashboard, Upload, Sun, Moon, Monitor } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, Rss, LayoutDashboard, Upload, Shield, Sun, Moon, Monitor } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
   Sidebar,
@@ -40,6 +42,17 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, profile } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }).then(({ data }) => {
+        setIsAdmin(!!data);
+      });
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -99,6 +112,36 @@ export function AppSidebar() {
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
+
+        {isAdmin && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground">Admin</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/admin')}
+                      tooltip={collapsed ? 'Admin' : undefined}
+                    >
+                      <NavLink
+                        to="/admin"
+                        end
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-accent"
+                        activeClassName="bg-accent text-accent-foreground font-medium"
+                      >
+                        <Shield className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span>Admin</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
