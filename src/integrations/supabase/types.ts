@@ -83,6 +83,13 @@ export type Database = {
             referencedRelation: "content"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "comments_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       content: {
@@ -174,6 +181,13 @@ export type Database = {
             referencedRelation: "content"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "likes_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       profiles: {
@@ -235,6 +249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "channels"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
