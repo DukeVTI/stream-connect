@@ -16,6 +16,7 @@ import type { Channel as ChannelType, ContentWithChannel } from '@/types/databas
 
 export default function Channel() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [content, setContent] = useState<ContentWithChannel[]>([]);
