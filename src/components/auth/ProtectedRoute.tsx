@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireCreator = false }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -26,9 +26,6 @@ export function ProtectedRoute({ children, requireCreator = false }: ProtectedRo
     return <Navigate to="/auth" replace />;
   }
 
-  if (requireCreator && profile && !profile.is_creator) {
-    return <Navigate to="/profile" replace />;
-  }
-
+  // Everyone can create channels — no creator gate needed
   return <>{children}</>;
 }

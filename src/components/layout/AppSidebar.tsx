@@ -40,7 +40,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -86,11 +86,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user && profile?.is_creator && (
+        {/* All logged-in users can access channels/upload */}
+        {user && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
-              {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground">Creator</SidebarGroupLabel>}
+              {!collapsed && <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground">My Channels</SidebarGroupLabel>}
               <SidebarGroupContent>
                 <SidebarMenu>
                   {creatorNav.map((item) => (
