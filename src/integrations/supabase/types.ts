@@ -18,36 +18,48 @@ export type Database = {
         Row: {
           avatar_url: string | null
           banner_url: string | null
+          category: string | null
           created_at: string
           description: string | null
+          handle: string | null
           id: string
           is_live: boolean
+          languages: string[] | null
           name: string
           owner_id: string
+          pin_code: string | null
           subscriber_count: number
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           banner_url?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
+          handle?: string | null
           id?: string
           is_live?: boolean
+          languages?: string[] | null
           name: string
           owner_id: string
+          pin_code?: string | null
           subscriber_count?: number
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           banner_url?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
+          handle?: string | null
           id?: string
           is_live?: boolean
+          languages?: string[] | null
           name?: string
           owner_id?: string
+          pin_code?: string | null
           subscriber_count?: number
           updated_at?: string
         }
@@ -307,9 +319,15 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          date_of_birth: string | null
           display_name: string | null
+          dob_public: boolean
+          first_name: string | null
+          hobbies: string[] | null
           id: string
           is_creator: boolean
+          last_name: string | null
+          nickname: string | null
           updated_at: string
           user_id: string
         }
@@ -317,9 +335,15 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
+          dob_public?: boolean
+          first_name?: string | null
+          hobbies?: string[] | null
           id?: string
           is_creator?: boolean
+          last_name?: string | null
+          nickname?: string | null
           updated_at?: string
           user_id: string
         }
@@ -327,9 +351,15 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          date_of_birth?: string | null
           display_name?: string | null
+          dob_public?: boolean
+          first_name?: string | null
+          hobbies?: string[] | null
           id?: string
           is_creator?: boolean
+          last_name?: string | null
+          nickname?: string | null
           updated_at?: string
           user_id?: string
         }
