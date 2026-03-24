@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ThumbsUp, MessageSquare, Eye, Share2, Headphones } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, Eye, Share2, Headphones, Flag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,17 +9,41 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import type { ContentWithFullChannel, CommentWithProfile } from '@/types/database';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
+import type { Database } from '@/integrations/supabase/types';
+
+type ContentRow = Database['public']['Tables']['content']['Row'];
+type CommentRow = Database['public']['Tables']['comments']['Row'];
+
+interface ContentWithChannel extends ContentRow {
+  channels: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    subscriber_count: number;
+    owner_id: string;
+    verification_badge?: 'none' | 'green' | 'blue';
+  } | null;
+}
+
+interface CommentWithProfile extends CommentRow {
+  profiles: { display_name: string | null; avatar_url: string | null } | null;
+}
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const [content, setContent] = useState<ContentWithFullChannel | null>(null);
+  const [content, setContent] = useState<ContentWithChannel | null>(null);
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [userVote, setUserVote] = useState<'approve' | 'disapprove' | null>(null);
+  const [approveCount, setApproveCount] = useState(0);
+  const [disapproveCount, setDisapproveCount] = useState(0);
   const [commentText, setCommentText] = useState('');
+  const [reportReason, setReportReason] = useState('');
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -36,33 +60,27 @@ export default function Watch() {
       .eq('id', id!)
       .single();
 
-    if (error || !data) {
-      setLoading(false);
-      return;
-    }
+    if (error || !data) { setLoading(false); return; }
 
-    setContent(data as ContentWithFullChannel);
-    setLikeCount(data.like_count);
+    setContent(data as ContentWithChannel);
+    setApproveCount(data.approve_count ?? 0);
+    setDisapproveCount(data.disapprove_count ?? 0);
 
-    // Atomic view increment
     await supabase.rpc('increment_view_count', { _content_id: id! });
 
-    // Parallel: load comments + check user state
     const promises: Promise<void>[] = [loadComments()];
-    if (user && data.channels) {
-      promises.push(checkUserState(data.channels.id));
-    }
+    if (user && data.channels) promises.push(checkUserState(data.channels.id));
     await Promise.all(promises);
     setLoading(false);
   };
 
   const checkUserState = async (channelId: string) => {
     if (!user) return;
-    const [likeRes, subRes] = await Promise.all([
-      supabase.from('likes').select('id').eq('content_id', id!).eq('user_id', user.id).maybeSingle(),
+    const [voteRes, subRes] = await Promise.all([
+      supabase.from('content_approvals').select('vote').eq('content_id', id!).eq('user_id', user.id).maybeSingle(),
       supabase.from('subscriptions').select('id').eq('channel_id', channelId).eq('user_id', user.id).maybeSingle(),
     ]);
-    setLiked(!!likeRes.data);
+    setUserVote((voteRes.data?.vote as 'approve' | 'disapprove') ?? null);
     setSubscribed(!!subRes.data);
   };
 
@@ -72,48 +90,47 @@ export default function Watch() {
       .select('*, profiles:comments_user_id_profiles_fkey(display_name, avatar_url)')
       .eq('content_id', id!)
       .order('created_at', { ascending: false });
-    if (error) {
-      toast.error('Failed to load comments');
-      return;
-    }
-    setComments((data as unknown as CommentWithProfile[]) ?? []);
+    if (!error) setComments((data as unknown as CommentWithProfile[]) ?? []);
   };
 
-  const handleLike = useCallback(async () => {
-    if (!user) return toast.error('Sign in to like');
+  const handleVote = useCallback(async (vote: 'approve' | 'disapprove') => {
+    if (!user) return toast.error('Sign in to vote');
     if (actionLoading) return;
-    setActionLoading('like');
+    setActionLoading('vote');
     try {
-      if (liked) {
-        await supabase.from('likes').delete().eq('content_id', id!).eq('user_id', user.id);
-        await supabase.rpc('decrement_like_count', { _content_id: id! });
-        setLiked(false);
-        setLikeCount((c) => Math.max(c - 1, 0));
-      } else {
-        await supabase.from('likes').insert({ content_id: id!, user_id: user.id });
-        await supabase.rpc('increment_like_count', { _content_id: id! });
-        setLiked(true);
-        setLikeCount((c) => c + 1);
+      const newVote = userVote === vote ? 'none' : vote;
+
+      // Optimistic update
+      const prevApprove = approveCount;
+      const prevDisapprove = disapproveCount;
+      const prevVote = userVote;
+
+      if (prevVote === 'approve') setApproveCount(c => Math.max(c - 1, 0));
+      if (prevVote === 'disapprove') setDisapproveCount(c => Math.max(c - 1, 0));
+      if (newVote === 'approve') setApproveCount(c => c + 1);
+      if (newVote === 'disapprove') setDisapproveCount(c => c + 1);
+      setUserVote(newVote === 'none' ? null : newVote as 'approve' | 'disapprove');
+
+      const { error } = await supabase.rpc('cast_vote', { _content_id: id!, _vote: newVote });
+      if (error) {
+        // Rollback
+        setApproveCount(prevApprove);
+        setDisapproveCount(prevDisapprove);
+        setUserVote(prevVote);
+        toast.error('Vote failed');
       }
-    } catch {
-      toast.error('Action failed');
     } finally {
       setActionLoading(null);
     }
-  }, [user, liked, id, actionLoading]);
+  }, [user, userVote, id, actionLoading, approveCount, disapproveCount]);
 
   const handleComment = useCallback(async () => {
     if (!user) return toast.error('Sign in to comment');
     if (!commentText.trim() || actionLoading) return;
     setActionLoading('comment');
     const { error } = await supabase.from('comments').insert({ content_id: id!, user_id: user.id, body: commentText.trim() });
-    if (error) {
-      toast.error('Failed to post comment');
-    } else {
-      setCommentText('');
-      loadComments();
-      toast.success('Comment added');
-    }
+    if (error) toast.error('Failed to post comment');
+    else { setCommentText(''); loadComments(); toast.success('Comment added'); }
     setActionLoading(null);
   }, [user, commentText, id, actionLoading]);
 
@@ -131,12 +148,18 @@ export default function Watch() {
         setSubscribed(true);
         toast.success('Subscribed!');
       }
-    } catch {
-      toast.error('Action failed');
-    } finally {
-      setActionLoading(null);
-    }
+    } catch { toast.error('Action failed'); }
+    finally { setActionLoading(null); }
   }, [user, content, subscribed, actionLoading]);
+
+  const handleReport = async () => {
+    if (!user) return toast.error('Sign in to report');
+    if (!reportReason.trim()) return toast.error('Please provide a reason');
+    const { error } = await supabase.from('content_reports').upsert({ content_id: id!, reporter_id: user.id, reason: reportReason.trim() }, { onConflict: 'content_id,reporter_id' });
+    if (error) toast.error('Failed to submit report');
+    else toast.success('Report submitted. Thank you.');
+    setReportReason('');
+  };
 
   if (loading) {
     return (
@@ -160,6 +183,8 @@ export default function Watch() {
     );
   }
 
+  const votingEnabled = content.approve_disapprove_enabled;
+
   return (
     <MainLayout>
       <div className="max-w-5xl mx-auto px-4 py-6">
@@ -173,14 +198,19 @@ export default function Watch() {
               <audio src={content.file_url} controls className="w-full max-w-md" />
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              No media file
-            </div>
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">No media file</div>
           )}
         </div>
 
-        {/* Title & Actions */}
-        <h1 className="text-xl font-bold mb-2">{content.title}</h1>
+        {/* Title */}
+        <h1 className="text-xl font-bold mb-1">{content.title}</h1>
+
+        {/* Caption */}
+        {content.caption && (
+          <p className="text-sm text-muted-foreground mb-3 italic">"{content.caption}"</p>
+        )}
+
+        {/* Channel + Actions row */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <Link to={`/channel/${content.channels?.id}`}>
@@ -190,7 +220,12 @@ export default function Watch() {
               </Avatar>
             </Link>
             <div>
-              <Link to={`/channel/${content.channels?.id}`} className="font-medium text-sm hover:text-primary">{content.channels?.name}</Link>
+              <div className="flex items-center gap-1.5">
+                <Link to={`/channel/${content.channels?.id}`} className="font-medium text-sm hover:text-primary">{content.channels?.name}</Link>
+                {content.channels?.verification_badge && content.channels.verification_badge !== 'none' && (
+                  <VerificationBadge type={content.channels.verification_badge} size="sm" />
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">{content.channels?.subscriber_count} subscribers</p>
             </div>
             {user?.id !== content.channels?.owner_id && (
@@ -205,19 +240,51 @@ export default function Watch() {
               </Button>
             )}
           </div>
+
           <div className="flex items-center gap-2">
-            <Button
-              variant={liked ? 'default' : 'secondary'}
-              size="sm"
-              className="rounded-full"
-              onClick={handleLike}
-              disabled={actionLoading === 'like'}
-            >
-              <ThumbsUp className="h-4 w-4 mr-1" /> {likeCount}
-            </Button>
+            {/* Approve / Disapprove */}
+            {votingEnabled && (
+              <>
+                <Button
+                  variant={userVote === 'approve' ? 'default' : 'secondary'}
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => handleVote('approve')}
+                  disabled={actionLoading === 'vote'}
+                >
+                  <ThumbsUp className="h-4 w-4 mr-1" /> APPROVE {approveCount > 0 && approveCount}
+                </Button>
+                <Button
+                  variant={userVote === 'disapprove' ? 'destructive' : 'secondary'}
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => handleVote('disapprove')}
+                  disabled={actionLoading === 'vote'}
+                >
+                  <ThumbsDown className="h-4 w-4 mr-1" /> DISAPPROVE {disapproveCount > 0 && disapproveCount}
+                </Button>
+              </>
+            )}
             <Button variant="secondary" size="sm" className="rounded-full" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }}>
               <Share2 className="h-4 w-4 mr-1" /> Share
             </Button>
+
+            {/* Report */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground">
+                  <Flag className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Report This Content</DialogTitle></DialogHeader>
+                <div className="space-y-3 pt-2">
+                  <Label>Reason for report</Label>
+                  <Textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="Describe why you are reporting this content..." rows={4} />
+                  <Button className="w-full" onClick={handleReport} disabled={!reportReason.trim()}>Submit Report</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -240,12 +307,7 @@ export default function Watch() {
 
           {user && (
             <div className="flex gap-3">
-              <Textarea
-                placeholder="Add a comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="min-h-[80px]"
-              />
+              <Textarea placeholder="Add a comment..." value={commentText} onChange={e => setCommentText(e.target.value)} className="min-h-[80px]" />
               <Button onClick={handleComment} disabled={!commentText.trim() || actionLoading === 'comment'} className="self-end">
                 {actionLoading === 'comment' ? 'Posting...' : 'Post'}
               </Button>
@@ -253,7 +315,7 @@ export default function Watch() {
           )}
 
           <div className="space-y-4">
-            {comments.map((comment) => (
+            {comments.map(comment => (
               <div key={comment.id} className="flex gap-3">
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage src={comment.profiles?.avatar_url ?? undefined} />

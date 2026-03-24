@@ -10,10 +10,17 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  needsProfileSetup: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; needsMfa?: boolean; factorId?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  // 2FA
+  enrollMfa: () => Promise<{ qrCode: string | null; secret: string | null; factorId: string | null; error: any }>;
+  verifyMfaEnrollment: (factorId: string, code: string) => Promise<{ error: any }>;
+  challengeAndVerifyMfa: (factorId: string, code: string) => Promise<{ error: any }>;
+  unenrollMfa: (factorId: string) => Promise<{ error: any }>;
+  getMfaFactors: () => Promise<{ factors: any[]; error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,13 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const needsProfileSetup = !!(user && profile && !profile.profile_complete);
+
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
-    setProfile(data);
+    setProfile(data as Profile | null);
   };
 
   const refreshProfile = async () => {
@@ -54,9 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
+      if (session?.user) fetchProfile(session.user.id);
       setLoading(false);
     });
 
@@ -77,8 +84,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error };
+
+    // Check if MFA is required (AAL2 needed)
+    const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!aalError && aal?.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel) {
+      const factors = data.user?.factors ?? [];
+      const totpFactor = factors.find((f: any) => f.factor_type === 'totp');
+      if (totpFactor) {
+        return { error: null, needsMfa: true, factorId: totpFactor.id };
+      }
+    }
+    return { error: null };
   };
 
   const signOut = async () => {
@@ -88,8 +106,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  // ── 2FA ──────────────────────────────────────────────────────────────
+
+  const enrollMfa = async () => {
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) return { qrCode: null, secret: null, factorId: null, error };
+    return {
+      qrCode: data.totp.qr_code,
+      secret: data.totp.secret,
+      factorId: data.id,
+      error: null,
+    };
+  };
+
+  const verifyMfaEnrollment = async (factorId: string, code: string) => {
+    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId });
+    if (cErr) return { error: cErr };
+    const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+    return { error };
+  };
+
+  const challengeAndVerifyMfa = async (factorId: string, code: string) => {
+    const { data: challenge, error: cErr } = await supabase.auth.mfa.challenge({ factorId });
+    if (cErr) return { error: cErr };
+    const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.id, code });
+    return { error };
+  };
+
+  const unenrollMfa = async (factorId: string) => {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    return { error };
+  };
+
+  const getMfaFactors = async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    return { factors: data?.totp ?? [], error };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{
+      user, session, profile, loading, needsProfileSetup,
+      signUp, signIn, signOut, refreshProfile,
+      enrollMfa, verifyMfaEnrollment, challengeAndVerifyMfa, unenrollMfa, getMfaFactors,
+    }}>
       {children}
     </AuthContext.Provider>
   );

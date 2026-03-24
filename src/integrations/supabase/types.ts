@@ -1,586 +1,270 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
-      channels: {
-        Row: {
-          avatar_url: string | null
-          banner_url: string | null
-          category: string | null
-          created_at: string
-          description: string | null
-          handle: string | null
-          id: string
-          is_live: boolean
-          languages: string[] | null
-          name: string
-          owner_id: string
-          pin_code: string | null
-          subscriber_count: number
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          banner_url?: string | null
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          handle?: string | null
-          id?: string
-          is_live?: boolean
-          languages?: string[] | null
-          name: string
-          owner_id: string
-          pin_code?: string | null
-          subscriber_count?: number
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          banner_url?: string | null
-          category?: string | null
-          created_at?: string
-          description?: string | null
-          handle?: string | null
-          id?: string
-          is_live?: boolean
-          languages?: string[] | null
-          name?: string
-          owner_id?: string
-          pin_code?: string | null
-          subscriber_count?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      comments: {
-        Row: {
-          body: string
-          content_id: string
-          created_at: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          body: string
-          content_id: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          body?: string
-          content_id?: string
-          created_at?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "content"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_user_id_profiles_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      content: {
-        Row: {
-          category: string | null
-          channel_id: string
-          content_type: string
-          created_at: string
-          creator_id: string
-          description: string | null
-          duration: number | null
-          file_url: string | null
-          id: string
-          like_count: number
-          status: string
-          thumbnail_url: string | null
-          title: string
-          updated_at: string
-          view_count: number
-        }
-        Insert: {
-          category?: string | null
-          channel_id: string
-          content_type: string
-          created_at?: string
-          creator_id: string
-          description?: string | null
-          duration?: number | null
-          file_url?: string | null
-          id?: string
-          like_count?: number
-          status?: string
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string
-          view_count?: number
-        }
-        Update: {
-          category?: string | null
-          channel_id?: string
-          content_type?: string
-          created_at?: string
-          creator_id?: string
-          description?: string | null
-          duration?: number | null
-          file_url?: string | null
-          id?: string
-          like_count?: number
-          status?: string
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string
-          view_count?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "content_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      creator_requests: {
-        Row: {
-          created_at: string
-          id: string
-          reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      likes: {
-        Row: {
-          content_id: string
-          created_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          content_id: string
-          created_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          content_id?: string
-          created_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "likes_content_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "content"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "likes_user_id_profiles_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      live_messages: {
-        Row: {
-          body: string
-          created_at: string
-          id: string
-          session_id: string
-          user_id: string
-        }
-        Insert: {
-          body: string
-          created_at?: string
-          id?: string
-          session_id: string
-          user_id: string
-        }
-        Update: {
-          body?: string
-          created_at?: string
-          id?: string
-          session_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "live_messages_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "live_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      live_sessions: {
-        Row: {
-          channel_id: string
-          creator_id: string
-          ended_at: string | null
-          id: string
-          livekit_room_name: string
-          started_at: string
-          status: string
-          title: string
-          viewer_count: number
-        }
-        Insert: {
-          channel_id: string
-          creator_id: string
-          ended_at?: string | null
-          id?: string
-          livekit_room_name: string
-          started_at?: string
-          status?: string
-          title: string
-          viewer_count?: number
-        }
-        Update: {
-          channel_id?: string
-          creator_id?: string
-          ended_at?: string | null
-          id?: string
-          livekit_room_name?: string
-          started_at?: string
-          status?: string
-          title?: string
-          viewer_count?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "live_sessions_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
-          avatar_url: string | null
-          bio: string | null
-          created_at: string
-          date_of_birth: string | null
-          display_name: string | null
-          dob_public: boolean
-          first_name: string | null
-          hobbies: string[] | null
-          id: string
-          is_creator: boolean
-          last_name: string | null
-          nickname: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          date_of_birth?: string | null
-          display_name?: string | null
-          dob_public?: boolean
-          first_name?: string | null
-          hobbies?: string[] | null
-          id?: string
-          is_creator?: boolean
-          last_name?: string | null
-          nickname?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          date_of_birth?: string | null
-          display_name?: string | null
-          dob_public?: boolean
-          first_name?: string | null
-          hobbies?: string[] | null
-          id?: string
-          is_creator?: boolean
-          last_name?: string | null
-          nickname?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          id: string;
+          user_id: string;
+          display_name: string | null;
+          first_name: string | null;
+          last_name: string | null;
+          nickname: string | null;
+          date_of_birth: string | null;
+          dob_visibility: 'public' | 'partial' | 'private';
+          profile_photo_url: string | null;
+          avatar_url: string | null;
+          bio: string | null;
+          hobbies: string[] | null;
+          profile_handle: string | null;
+          profile_complete: boolean;
+          is_creator: boolean;
+          account_status: 'active' | 'suspended' | 'deactivated';
+          verification_badge: 'none' | 'green' | 'blue';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { user_id: string };
+        Update: Partial<Database['public']['Tables']['profiles']['Row']>;
+      };
+      channels: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          description: string | null;
+          handle: string | null;
+          category: string | null;
+          languages: string[];
+          avatar_url: string | null;
+          banner_url: string | null;
+          profile_photo_url: string | null;
+          channel_pin_hash: string | null;
+          livestream_eligible: boolean;
+          is_first_channel: boolean;
+          subscription_tier: 'free' | 'paid';
+          storage_used_seconds: number;
+          approve_disapprove_enabled: boolean;
+          subscriber_count: number;
+          is_live: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['channels']['Row'], 'owner_id' | 'name'> &
+          Partial<Database['public']['Tables']['channels']['Row']>;
+        Update: Partial<Database['public']['Tables']['channels']['Row']>;
+      };
+      content: {
+        Row: {
+          id: string;
+          channel_id: string;
+          creator_id: string;
+          title: string;
+          caption: string | null;
+          description: string | null;
+          content_type: 'video' | 'audio';
+          file_url: string | null;
+          thumbnail_url: string | null;
+          duration: number | null;
+          view_count: number;
+          like_count: number;
+          approve_count: number;
+          disapprove_count: number;
+          approve_disapprove_enabled: boolean;
+          is_psa_short: boolean;
+          status: 'draft' | 'published' | 'unlisted';
+          category: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['content']['Row'], 'channel_id' | 'creator_id' | 'title' | 'content_type'> &
+          Partial<Database['public']['Tables']['content']['Row']>;
+        Update: Partial<Database['public']['Tables']['content']['Row']>;
+      };
+      content_approvals: {
+        Row: {
+          id: string;
+          content_id: string;
+          user_id: string;
+          vote: 'approve' | 'disapprove';
+          created_at: string;
+        };
+        Insert: { content_id: string; user_id: string; vote: 'approve' | 'disapprove' };
+        Update: { vote: 'approve' | 'disapprove' };
+      };
+      psa_shorts: {
+        Row: {
+          id: string;
+          channel_id: string;
+          creator_id: string;
+          title: string;
+          caption: string;
+          description: string | null;
+          file_url: string | null;
+          thumbnail_url: string | null;
+          duration_seconds: number | null;
+          view_count: number;
+          approve_count: number;
+          disapprove_count: number;
+          approve_disapprove_enabled: boolean;
+          status: 'draft' | 'published' | 'unlisted';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['psa_shorts']['Row'], 'channel_id' | 'creator_id' | 'title' | 'caption'> &
+          Partial<Database['public']['Tables']['psa_shorts']['Row']>;
+        Update: Partial<Database['public']['Tables']['psa_shorts']['Row']>;
+      };
+      account_admins: {
+        Row: {
+          id: string;
+          account_owner_id: string;
+          assigned_user_id: string | null;
+          first_name: string;
+          last_name: string;
+          email: string;
+          role: 'manager' | 'editor' | 'viewer';
+          channel_permissions: string[];
+          status: 'pending' | 'active' | 'revoked';
+          invited_at: string;
+          accepted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['account_admins']['Row'], 'account_owner_id' | 'first_name' | 'last_name' | 'email'> &
+          Partial<Database['public']['Tables']['account_admins']['Row']>;
+        Update: Partial<Database['public']['Tables']['account_admins']['Row']>;
+      };
+      subscription_plans: {
+        Row: {
+          id: string;
+          channel_id: string;
+          plan_type: 'basic' | 'premium';
+          starts_at: string;
+          expires_at: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['subscription_plans']['Row'], 'channel_id'> &
+          Partial<Database['public']['Tables']['subscription_plans']['Row']>;
+        Update: Partial<Database['public']['Tables']['subscription_plans']['Row']>;
+      };
+      subscriber_locations: {
+        Row: {
+          id: string;
+          channel_id: string;
+          user_id: string;
+          country_code: string | null;
+          country_name: string | null;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['subscriber_locations']['Row'], 'channel_id' | 'user_id'> &
+          Partial<Database['public']['Tables']['subscriber_locations']['Row']>;
+        Update: Partial<Database['public']['Tables']['subscriber_locations']['Row']>;
+      };
+      content_reports: {
+        Row: {
+          id: string;
+          content_id: string;
+          reporter_id: string;
+          reason: string;
+          status: 'open' | 'reviewed' | 'dismissed';
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['content_reports']['Row'], 'content_id' | 'reporter_id' | 'reason'> &
+          Partial<Database['public']['Tables']['content_reports']['Row']>;
+        Update: Partial<Database['public']['Tables']['content_reports']['Row']>;
+      };
+      comments: {
+        Row: {
+          id: string;
+          content_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['comments']['Row'], 'content_id' | 'user_id' | 'body'>;
+        Update: Partial<Database['public']['Tables']['comments']['Row']>;
+      };
       subscriptions: {
         Row: {
-          channel_id: string
-          created_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          channel_id: string
-          created_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          channel_id?: string
-          created_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subscriptions_channel_id_fkey"
-            columns: ["channel_id"]
-            isOneToOne: false
-            referencedRelation: "channels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_user_id_profiles_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
+          id: string;
+          channel_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['subscriptions']['Row'], 'channel_id' | 'user_id'>;
+        Update: Partial<Database['public']['Tables']['subscriptions']['Row']>;
+      };
+      creator_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: 'pending' | 'approved' | 'rejected';
+          reason: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['creator_requests']['Row'], 'user_id'> &
+          Partial<Database['public']['Tables']['creator_requests']['Row']>;
+        Update: Partial<Database['public']['Tables']['creator_requests']['Row']>;
+      };
+      live_sessions: {
+        Row: {
+          id: string;
+          channel_id: string;
+          creator_id: string;
+          title: string;
+          status: string;
+          livekit_room_name: string;
+          viewer_count: number;
+          started_at: string;
+          ended_at: string | null;
+        };
+        Insert: Pick<Database['public']['Tables']['live_sessions']['Row'], 'channel_id' | 'creator_id' | 'title' | 'livekit_room_name'> &
+          Partial<Database['public']['Tables']['live_sessions']['Row']>;
+        Update: Partial<Database['public']['Tables']['live_sessions']['Row']>;
+      };
+      live_messages: {
+        Row: {
+          id: string;
+          session_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['live_messages']['Row'], 'session_id' | 'user_id' | 'body'>;
+        Update: Partial<Database['public']['Tables']['live_messages']['Row']>;
+      };
       user_roles: {
         Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
+          id: string;
+          user_id: string;
+          role: 'admin' | 'moderator' | 'user';
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['user_roles']['Row'], 'user_id' | 'role'>;
+        Update: Partial<Database['public']['Tables']['user_roles']['Row']>;
+      };
+    };
     Functions: {
-      decrement_like_count: {
-        Args: { _content_id: string }
-        Returns: undefined
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      increment_like_count: {
-        Args: { _content_id: string }
-        Returns: undefined
-      }
-      increment_view_count: {
-        Args: { _content_id: string }
-        Returns: undefined
-      }
-      review_creator_request: {
-        Args: { _decision: string; _request_id: string }
-        Returns: undefined
-      }
-    }
+      has_role: { Args: { _user_id: string; _role: string }; Returns: boolean };
+      review_creator_request: { Args: { _request_id: string; _decision: string }; Returns: void };
+      increment_view_count: { Args: { _content_id: string }; Returns: void };
+      increment_like_count: { Args: { _content_id: string }; Returns: void };
+      decrement_like_count: { Args: { _content_id: string }; Returns: void };
+      cast_vote: { Args: { _content_id: string; _vote: string }; Returns: void };
+      set_channel_pin: { Args: { _channel_id: string; _plain_pin: string }; Returns: void };
+      verify_channel_pin: { Args: { _channel_id: string; _plain_pin: string }; Returns: boolean };
+      admin_set_account_status: { Args: { _user_id: string; _status: string }; Returns: void };
+      admin_set_verification_badge: { Args: { _user_id: string; _badge: string }; Returns: void };
+    };
     Enums: {
-      app_role: "admin" | "moderator" | "user"
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
-
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: ["admin", "moderator", "user"],
-    },
-  },
-} as const
+      app_role: 'admin' | 'moderator' | 'user';
+    };
+  };
+};
