@@ -26,17 +26,21 @@ export function Navbar() {
     }
   };
 
+  const displayInitial = (profile as any)?.first_name?.charAt(0)?.toUpperCase()
+    ?? profile?.display_name?.charAt(0)?.toUpperCase()
+    ?? 'U';
+
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center gap-4 px-4">
         {/* Sidebar trigger + Logo */}
         <div className="flex items-center gap-2 shrink-0">
           <SidebarTrigger className="-ml-1" />
-          <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+          <Link to="/" className="flex items-center gap-2 font-bold text-xl" style={{ fontFamily: 'Space Grotesk' }}>
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-sm font-black">
               B
             </div>
-            <span className="hidden sm:inline">BCR</span>
+            <span className="hidden sm:inline">BCTV</span>
           </Link>
         </div>
 
@@ -57,18 +61,16 @@ export function Navbar() {
         <div className="flex items-center gap-2 shrink-0">
           {user ? (
             <>
-              {profile?.is_creator && (
-                <Button variant="ghost" size="icon" onClick={() => navigate('/upload')} title="Upload">
-                  <Upload className="h-5 w-5" />
-                </Button>
-              )}
+              <Button variant="ghost" size="icon" onClick={() => navigate('/upload')} title="Upload">
+                <Upload className="h-5 w-5" />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={profile?.avatar_url ?? undefined} />
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {profile?.display_name?.charAt(0)?.toUpperCase() ?? 'U'}
+                        {displayInitial}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -77,11 +79,9 @@ export function Navbar() {
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="mr-2 h-4 w-4" /> Profile
                   </DropdownMenuItem>
-                  {profile?.is_creator && (
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                      <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" /> Sign out

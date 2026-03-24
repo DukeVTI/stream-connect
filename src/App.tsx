@@ -32,8 +32,8 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/watch/:id" element={<Watch />} />
-              <Route path="/dashboard" element={<ProtectedRoute requireCreator><Dashboard /></ProtectedRoute>} />
-              <Route path="/upload" element={<ProtectedRoute requireCreator><Upload /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
               <Route path="/channel/:id" element={<Channel />} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
