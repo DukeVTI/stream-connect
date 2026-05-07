@@ -48,7 +48,7 @@ export default function Dashboard() {
     customLanguage: '',
   });
   const [creating, setCreating] = useState(false);
-  const [goLiveData, setGoLiveData] = useState({ channelId: '', title: '' });
+  const [goLiveData, setGoLiveData] = useState({ channelId: '', title: '', caption: '', description: '' });
   const [goingLive, setGoingLive] = useState(false);
 
   useEffect(() => {
@@ -223,7 +223,7 @@ export default function Dashboard() {
   };
 
   const goLive = async () => {
-    if (!user || !goLiveData.channelId || !goLiveData.title.trim() || goingLive) return;
+    if (!user || !goLiveData.channelId || !goLiveData.title.trim() || !goLiveData.caption.trim() || goingLive) return;
     const channel = channels.find(c => c.id === goLiveData.channelId);
     if (channel && !channel.livestream_eligible) {
       toast.error('This channel is not eligible for livestreaming. Upgrade or use your first channel.');
@@ -233,12 +233,12 @@ export default function Dashboard() {
     const roomName = `live-${goLiveData.channelId}-${Date.now()}`;
     const { data: session, error } = await supabase
       .from('live_sessions')
-      .insert({ channel_id: goLiveData.channelId, creator_id: user.id, title: goLiveData.title.trim(), livekit_room_name: roomName })
+      .insert({ channel_id: goLiveData.channelId, creator_id: user.id, title: goLiveData.title.trim(), caption: goLiveData.caption.trim(), description: goLiveData.description.trim() || null, livekit_room_name: roomName })
       .select().single();
     if (error || !session) { toast.error(error?.message || 'Failed to start stream'); setGoingLive(false); return; }
     await supabase.from('channels').update({ is_live: true }).eq('id', goLiveData.channelId);
     setGoLiveOpen(false);
-    setGoLiveData({ channelId: '', title: '' });
+    setGoLiveData({ channelId: '', title: '', caption: '', description: '' });
     setGoingLive(false);
     navigate(`/live/${session.id}`);
   };
@@ -258,7 +258,7 @@ export default function Dashboard() {
                   <Radio className="h-4 w-4 mr-2" /> Go Live
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>Start a Livestream</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
@@ -276,7 +276,38 @@ export default function Dashboard() {
                     <Label>Stream Title</Label>
                     <Input value={goLiveData.title} onChange={e => setGoLiveData(p => ({ ...p, title: e.target.value }))} placeholder="What are you streaming?" />
                   </div>
-                  <Button onClick={goLive} className="w-full" variant="destructive" disabled={goingLive || !goLiveData.channelId || !goLiveData.title.trim()}>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Caption <span className="text-destructive">*</span></Label>
+                      <span className="text-xs text-muted-foreground">{goLiveData.caption.length}/120</span>
+                    </div>
+                    <Textarea 
+                      value={goLiveData.caption} 
+                      onChange={e => setGoLiveData(p => ({ ...p, caption: e.target.value.slice(0, 120) }))} 
+                      placeholder="Brief description of your livestream (required)" 
+                      className="resize-none"
+                      maxLength={120}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Description</Label>
+                      <span className="text-xs text-muted-foreground">{goLiveData.description.length}/1000</span>
+                    </div>
+                    <Textarea 
+                      value={goLiveData.description} 
+                      onChange={e => setGoLiveData(p => ({ ...p, description: e.target.value.slice(0, 1000) }))} 
+                      placeholder="Add more details about your livestream (optional)" 
+                      className="resize-none"
+                      maxLength={1000}
+                    />
+                  </div>
+                  <Button 
+                    onClick={goLive} 
+                    className="w-full" 
+                    variant="destructive" 
+                    disabled={goingLive || !goLiveData.channelId || !goLiveData.title.trim() || !goLiveData.caption.trim()}
+                  >
                     {goingLive ? 'Starting...' : 'Go Live'}
                   </Button>
                 </div>

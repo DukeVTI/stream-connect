@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { LiveStreamPlayer } from '@/components/live/LiveStreamPlayer';
 import { LiveStreamControls } from '@/components/live/LiveStreamControls';
 import { LiveChat } from '@/components/live/LiveChat';
+import { LiveCallQueue } from '@/components/live/LiveCallQueue';
 import { LiveBadge } from '@/components/live/LiveBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -171,9 +172,17 @@ export default function Live() {
             </div>
           </div>
 
-          {/* Chat */}
-          <div className="lg:col-span-1 h-[calc(100vh-12rem)]">
-            <LiveChat sessionId={session.id} />
+          {/* Chat and Call Queue */}
+          <div className="lg:col-span-1 space-y-4 h-[calc(100vh-12rem)]">
+            {isPublisher && (
+              <LiveCallQueue sessionId={session.id} isPublisher={isPublisher} />
+            )}
+            {!isPublisher && (
+              <LiveCallQueue sessionId={session.id} isPublisher={isPublisher} />
+            )}
+            <div className="flex-1 overflow-hidden">
+              <LiveChat sessionId={session.id} isPublisher={isPublisher} />
+            </div>
           </div>
         </div>
       </div>
