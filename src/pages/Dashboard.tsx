@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Users, Film, Trash2, Radio, KeyRound, Lock, Unlock, BadgeCheck } from 'lucide-react';
+import { Plus, Eye, Users, Film, Trash2, Radio, KeyRound, Lock, Unlock, BadgeCheck, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
+  const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [newChannel, setNewChannel] = useState({
     name: '',
     description: '',
@@ -77,7 +78,48 @@ export default function Dashboard() {
         : [...p.languages, lang],
     }));
 
-  const createChannel = async () => {
+  const openNewChannelDialog = () => {
+    setEditingChannelId(null);
+    setNewChannel({ name: '', description: '', handle: '', category: '', customCategory: '', languages: [], customLanguage: '' });
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setDialogOpen(true);
+  };
+
+  const openEditChannelDialog = (ch: Channel) => {
+    setEditingChannelId(ch.id);
+    let category = ch.category;
+    let customCategory = '';
+    if (category && !CHANNEL_CATEGORIES.includes(category as any)) {
+      customCategory = category;
+      category = 'Others';
+    }
+
+    let langs = ch.languages || [];
+    let customLanguage = '';
+    const filteredLangs = langs.filter(l => CHANNEL_LANGUAGES.includes(l as any));
+    const otherLang = langs.find(l => !CHANNEL_LANGUAGES.includes(l as any));
+    
+    if (otherLang) {
+      filteredLangs.push('Others');
+      customLanguage = otherLang;
+    }
+
+    setNewChannel({
+      name: ch.name || '',
+      description: ch.description || '',
+      handle: ch.handle || '',
+      category: category || '',
+      customCategory,
+      languages: filteredLangs,
+      customLanguage,
+    });
+    setPhotoPreview(ch.profile_photo_url);
+    setPhotoFile(null);
+    setDialogOpen(true);
+  };
+
+  const saveChannel = async () => {
     if (!user || !newChannel.name.trim() || !newChannel.handle.trim() || !newChannel.category || creating) return;
 
     const finalCategory = newChannel.category === 'Others'
@@ -91,40 +133,64 @@ export default function Dashboard() {
 
     setCreating(true);
     try {
-      // Insert channel first
-      const { data: ch, error } = await supabase.from('channels').insert({
-        owner_id: user.id,
-        name: newChannel.name.trim(),
-        description: newChannel.description.trim() || null,
-        handle: newChannel.handle.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''),
-        category: finalCategory,
-        languages: finalLanguages,
-      } as any).select().single();
+      let chId = editingChannelId;
 
-      if (error) {
-        if (error.message.includes('duplicate') || error.message.includes('unique')) {
-          toast.error('That handle is already taken. Choose a different one.');
-        } else {
-          toast.error(error.message);
+      if (editingChannelId) {
+        // Update existing channel
+        const { error } = await supabase.from('channels')
+          .update({
+            name: newChannel.name.trim(),
+            description: newChannel.description.trim() || null,
+            handle: newChannel.handle.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''),
+            category: finalCategory,
+            languages: finalLanguages,
+          } as any)
+          .eq('id', editingChannelId);
+
+        if (error) {
+          if (error.message.includes('duplicate') || error.message.includes('unique')) {
+            toast.error('That handle is already taken. Choose a different one.');
+          } else {
+            toast.error(error.message);
+          }
+          setCreating(false);
+          return;
         }
-        return;
+      } else {
+        // Insert new channel
+        const { data: ch, error } = await supabase.from('channels').insert({
+          owner_id: user.id,
+          name: newChannel.name.trim(),
+          description: newChannel.description.trim() || null,
+          handle: newChannel.handle.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''),
+          category: finalCategory,
+          languages: finalLanguages,
+        } as any).select().single();
+
+        if (error) {
+          if (error.message.includes('duplicate') || error.message.includes('unique')) {
+            toast.error('That handle is already taken. Choose a different one.');
+          } else {
+            toast.error(error.message);
+          }
+          setCreating(false);
+          return;
+        }
+        chId = ch.id;
       }
 
       // Upload profile photo if selected
-      if (photoFile && ch) {
+      if (photoFile && chId) {
         const ext = photoFile.name.split('.').pop();
-        const path = `${user.id}/${ch.id}.${ext}`;
+        const path = `${user.id}/${chId}.${ext}`;
         const { error: upErr } = await supabase.storage.from('channel-photos').upload(path, photoFile, { upsert: true });
         if (!upErr) {
           const { data: urlData } = supabase.storage.from('channel-photos').getPublicUrl(path);
-          await supabase.from('channels').update({ profile_photo_url: urlData.publicUrl, avatar_url: urlData.publicUrl }).eq('id', ch.id);
+          await supabase.from('channels').update({ profile_photo_url: urlData.publicUrl, avatar_url: urlData.publicUrl }).eq('id', chId);
         }
       }
 
-      toast.success('Channel created!');
-      setNewChannel({ name: '', description: '', handle: '', category: '', customCategory: '', languages: [], customLanguage: '' });
-      setPhotoFile(null);
-      setPhotoPreview(null);
+      toast.success(editingChannelId ? 'Channel updated!' : 'Channel created!');
       setDialogOpen(false);
       loadData();
     } finally {
@@ -270,12 +336,10 @@ export default function Dashboard() {
         {/* Channels section */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Your Channels</h2>
+          <Button variant="outline" size="sm" onClick={openNewChannelDialog}><Plus className="h-4 w-4 mr-1" /> New Channel</Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm"><Plus className="h-4 w-4 mr-1" /> New Channel</Button>
-            </DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Create BCTV Channel</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingChannelId ? 'Edit Channel' : 'Create BCTV Channel'}</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-2">
 
                 {/* Channel profile photo */}
@@ -356,11 +420,11 @@ export default function Dashboard() {
                 </div>
 
                 <Button
-                  onClick={createChannel}
+                  onClick={saveChannel}
                   className="w-full"
-                  disabled={creating || !newChannel.name.trim() || !newChannel.handle.trim() || !newChannel.category || !newChannel.description.trim() || !photoFile}
+                  disabled={creating || !newChannel.name.trim() || !newChannel.handle.trim() || !newChannel.category || !newChannel.description.trim() || (!photoFile && !editingChannelId)}
                 >
-                  {creating ? 'Creating...' : 'Create Channel'}
+                  {creating ? 'Saving...' : (editingChannelId ? 'Save Changes' : 'Create Channel')}
                 </Button>
               </div>
             </DialogContent>
@@ -373,7 +437,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">You haven't created any channels yet</p>
-              <Button onClick={() => setDialogOpen(true)}><Plus className="h-4 w-4 mr-2" /> Create Your First Channel</Button>
+              <Button onClick={openNewChannelDialog}><Plus className="h-4 w-4 mr-2" /> Create Your First Channel</Button>
             </CardContent>
           </Card>
         ) : (
@@ -410,6 +474,18 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Edit Channel"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditChannelDialog(ch);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

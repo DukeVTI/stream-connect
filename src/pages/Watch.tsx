@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ThumbsUp, ThumbsDown, MessageSquare, Eye, Share2, Headphones, Flag } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ThumbsUp, ThumbsDown, MessageSquare, Eye, Share2, Headphones, Flag, Pencil, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { CHANNEL_CATEGORIES } from '@/lib/constants';
 import { toast } from 'sonner';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import type { Database } from '@/integrations/supabase/types';
@@ -36,6 +39,7 @@ interface CommentWithProfile extends CommentRow {
 
 export default function Watch() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [content, setContent] = useState<ContentWithChannel | null>(null);
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
@@ -47,6 +51,17 @@ export default function Watch() {
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    caption: '',
+    description: '',
+    category: '',
+    status: '',
+    approve_disapprove_enabled: true
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (id) loadContent();
@@ -161,6 +176,51 @@ export default function Watch() {
     setReportReason('');
   };
 
+  const openEditDialog = () => {
+    if (!content) return;
+    setEditForm({
+      title: content.title,
+      caption: content.caption || '',
+      description: content.description || '',
+      category: content.category || 'Others',
+      status: content.status || 'published',
+      approve_disapprove_enabled: content.approve_disapprove_enabled ?? true
+    });
+    setEditDialogOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!content || !editForm.title.trim() || !editForm.category) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from('content').update({
+      title: editForm.title.trim(),
+      caption: editForm.caption.trim() || null,
+      description: editForm.description.trim() || null,
+      category: editForm.category,
+      status: editForm.status,
+      approve_disapprove_enabled: editForm.approve_disapprove_enabled
+    } as any).eq('id', content.id);
+
+    setSavingEdit(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Content updated');
+      setEditDialogOpen(false);
+      loadContent();
+    }
+  };
+
+  const deleteContent = async () => {
+    if (!content) return;
+    if (!confirm('Are you sure you want to delete this content permanently?')) return;
+    const { error } = await supabase.from('content').delete().eq('id', content.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Content deleted');
+      navigate('/dashboard');
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -184,6 +244,7 @@ export default function Watch() {
   }
 
   const votingEnabled = content.approve_disapprove_enabled;
+  const isOwner = user?.id === content.creator_id;
 
   return (
     <MainLayout>
@@ -242,6 +303,17 @@ export default function Watch() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isOwner && (
+              <>
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-primary" onClick={openEditDialog}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-destructive" onClick={deleteContent}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+
             {/* Approve / Disapprove */}
             {votingEnabled && (
               <>
@@ -298,6 +370,56 @@ export default function Watch() {
             <p className="text-sm whitespace-pre-wrap">{content.description}</p>
           </div>
         )}
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto w-[90%] sm:max-w-[500px]">
+            <DialogHeader><DialogTitle>Edit Content</DialogTitle></DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>Title <span className="text-destructive">*</span></Label>
+                <Input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Caption</Label>
+                <Input value={editForm.caption} onChange={e => setEditForm(p => ({ ...p, caption: e.target.value }))} placeholder="Optional short subtitle" />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={4} />
+              </div>
+              <div className="space-y-2">
+                <Label>Category <span className="text-destructive">*</span></Label>
+                <Select value={editForm.category} onValueChange={v => setEditForm(p => ({ ...p, category: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {CHANNEL_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Visibility Status</Label>
+                <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="draft">Draft (hidden)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between mt-6 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-0.5">
+                  <Label>Enable Votes</Label>
+                  <p className="text-xs text-muted-foreground">Allow viewers to approve / disapprove</p>
+                </div>
+                <Switch checked={editForm.approve_disapprove_enabled} onCheckedChange={c => setEditForm(p => ({ ...p, approve_disapprove_enabled: c }))} />
+              </div>
+              <Button onClick={saveEdit} className="w-full mt-4" disabled={savingEdit || !editForm.title.trim()}>
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Comments */}
         <div className="space-y-4">

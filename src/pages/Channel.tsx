@@ -235,6 +235,7 @@ export default function Channel() {
                     channelName={item.channels?.name ?? channel.name}
                     channelAvatar={item.channels?.avatar_url ?? channel.avatar_url}
                     channelId={channel.id}
+                    isOwner={isOwner}
                   />
                 ))}
               </div>

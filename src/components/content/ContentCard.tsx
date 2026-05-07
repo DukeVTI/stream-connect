@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Play, Headphones, Eye } from 'lucide-react';
+import { Play, Headphones, Eye, Settings } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ContentCardProps {
@@ -12,10 +12,11 @@ interface ContentCardProps {
   channelName: string;
   channelAvatar: string | null;
   channelId: string;
+  isOwner?: boolean;
 }
 
 export function ContentCard({
-  id, title, thumbnailUrl, contentType, viewCount, createdAt, channelName, channelAvatar, channelId,
+  id, title, thumbnailUrl, contentType, viewCount, createdAt, channelName, channelAvatar, channelId, isOwner
 }: ContentCardProps) {
   return (
     <div className="group">
@@ -51,7 +52,7 @@ export function ContentCard({
             )}
           </div>
         </Link>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <Link to={`/watch/${id}`}>
             <h3 className="font-medium text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
               {title}
@@ -66,6 +67,11 @@ export function ContentCard({
             <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
           </div>
         </div>
+        {isOwner && (
+          <Link to={`/watch/${id}`} title="Manage Content" className="mt-1 ml-1 text-muted-foreground hover:text-primary transition-colors shrink-0">
+            <Settings className="h-4 w-4" />
+          </Link>
+        )}
       </div>
     </div>
   );
