@@ -250,6 +250,153 @@ export type Database = {
         Insert: Pick<Database['public']['Tables']['user_roles']['Row'], 'user_id' | 'role'>;
         Update: Partial<Database['public']['Tables']['user_roles']['Row']>;
       };
+      simulcast_partnerships: {
+        Row: {
+          id: string;
+          primary_channel_id: string;
+          secondary_channel_id: string;
+          status: 'pending' | 'accepted' | 'rejected' | 'active' | 'ended';
+          created_at: string;
+          updated_at: string;
+          started_at: string | null;
+          ended_at: string | null;
+        };
+        Insert: Pick<Database['public']['Tables']['simulcast_partnerships']['Row'], 'primary_channel_id' | 'secondary_channel_id'> &
+          Partial<Database['public']['Tables']['simulcast_partnerships']['Row']>;
+        Update: Partial<Database['public']['Tables']['simulcast_partnerships']['Row']>;
+      };
+      simulcast_sessions: {
+        Row: {
+          id: string;
+          partnership_id: string;
+          primary_session_id: string;
+          secondary_session_id: string | null;
+          started_at: string;
+          ended_at: string | null;
+        };
+        Insert: Pick<Database['public']['Tables']['simulcast_sessions']['Row'], 'partnership_id' | 'primary_session_id'> &
+          Partial<Database['public']['Tables']['simulcast_sessions']['Row']>;
+        Update: Partial<Database['public']['Tables']['simulcast_sessions']['Row']>;
+      };
+      recordings: {
+        Row: {
+          id: string;
+          session_id: string;
+          channel_id: string;
+          status: 'pending' | 'recording' | 'processing' | 'completed' | 'failed' | 'paused';
+          recording_url: string | null;
+          thumbnail_url: string | null;
+          duration_seconds: number | null;
+          file_size_bytes: number | null;
+          livekit_egress_id: string | null;
+          created_at: string;
+          started_at: string | null;
+          ended_at: string | null;
+          paused_at: string | null;
+          resumed_at: string | null;
+          completed_at: string | null;
+        };
+        Insert: Pick<Database['public']['Tables']['recordings']['Row'], 'session_id' | 'channel_id'> &
+          Partial<Database['public']['Tables']['recordings']['Row']>;
+        Update: Partial<Database['public']['Tables']['recordings']['Row']>;
+      };
+      recording_segments: {
+        Row: {
+          id: string;
+          recording_id: string;
+          segment_number: number;
+          started_at: string;
+          ended_at: string | null;
+          duration_seconds: number | null;
+          segment_url: string | null;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['recording_segments']['Row'], 'recording_id' | 'segment_number' | 'started_at'> &
+          Partial<Database['public']['Tables']['recording_segments']['Row']>;
+        Update: Partial<Database['public']['Tables']['recording_segments']['Row']>;
+      };
+      automation_playlists: {
+        Row: {
+          id: string;
+          channel_id: string;
+          name: string;
+          description: string | null;
+          is_active: boolean;
+          loop_enabled: boolean;
+          shuffle_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['automation_playlists']['Row'], 'channel_id' | 'name'> &
+          Partial<Database['public']['Tables']['automation_playlists']['Row']>;
+        Update: Partial<Database['public']['Tables']['automation_playlists']['Row']>;
+      };
+      automation_playlist_items: {
+        Row: {
+          id: string;
+          playlist_id: string;
+          content_id: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['automation_playlist_items']['Row'], 'playlist_id' | 'content_id' | 'position'> &
+          Partial<Database['public']['Tables']['automation_playlist_items']['Row']>;
+        Update: Partial<Database['public']['Tables']['automation_playlist_items']['Row']>;
+      };
+      automation_schedules: {
+        Row: {
+          id: string;
+          channel_id: string;
+          playlist_id: string;
+          trigger_type: 'always_offline' | 'scheduled' | 'manual';
+          is_enabled: boolean;
+          start_hour: number | null;
+          start_minute: number | null;
+          end_hour: number | null;
+          end_minute: number | null;
+          days_of_week: number[] | null;
+          timezone: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['automation_schedules']['Row'], 'channel_id' | 'playlist_id' | 'trigger_type'> &
+          Partial<Database['public']['Tables']['automation_schedules']['Row']>;
+        Update: Partial<Database['public']['Tables']['automation_schedules']['Row']>;
+      };
+      automation_sessions: {
+        Row: {
+          id: string;
+          channel_id: string;
+          schedule_id: string;
+          playlist_id: string;
+          status: 'pending' | 'running' | 'paused' | 'completed' | 'failed';
+          livekit_room_name: string | null;
+          livekit_egress_id: string | null;
+          current_item_id: string | null;
+          current_item_number: number | null;
+          total_items: number | null;
+          started_at: string | null;
+          ended_at: string | null;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['automation_sessions']['Row'], 'channel_id' | 'schedule_id' | 'playlist_id'> &
+          Partial<Database['public']['Tables']['automation_sessions']['Row']>;
+        Update: Partial<Database['public']['Tables']['automation_sessions']['Row']>;
+      };
+      automation_logs: {
+        Row: {
+          id: string;
+          channel_id: string;
+          session_id: string | null;
+          event_type: 'started' | 'paused' | 'resumed' | 'stopped' | 'item_changed' | 'error';
+          message: string | null;
+          metadata: any | null;
+          created_at: string;
+        };
+        Insert: Pick<Database['public']['Tables']['automation_logs']['Row'], 'channel_id' | 'event_type'> &
+          Partial<Database['public']['Tables']['automation_logs']['Row']>;
+        Update: Partial<Database['public']['Tables']['automation_logs']['Row']>;
+      };
     };
     Functions: {
       has_role: { Args: { _user_id: string; _role: string }; Returns: boolean };
@@ -262,6 +409,25 @@ export type Database = {
       verify_channel_pin: { Args: { _channel_id: string; _plain_pin: string }; Returns: boolean };
       admin_set_account_status: { Args: { _user_id: string; _status: string }; Returns: void };
       admin_set_verification_badge: { Args: { _user_id: string; _badge: string }; Returns: void };
+      request_simulcast_partnership: { Args: { _primary_channel_id: string; _secondary_channel_id: string }; Returns: string };
+      accept_simulcast_partnership: { Args: { _partnership_id: string }; Returns: void };
+      reject_simulcast_partnership: { Args: { _partnership_id: string }; Returns: void };
+      start_simulcast_session: { Args: { _partnership_id: string; _primary_session_id: string }; Returns: string };
+      end_simulcast_session: { Args: { _partnership_id: string }; Returns: void };
+      get_simulcast_info: { Args: { _session_id: string }; Returns: { partnership_id: string; secondary_channel_id: string; secondary_channel_name: string; secondary_channel_avatar_url: string | null; simulcast_session_id: string }[] };
+      start_recording: { Args: { _session_id: string; _livekit_egress_id: string }; Returns: string };
+      pause_recording: { Args: { _recording_id: string }; Returns: void };
+      resume_recording: { Args: { _recording_id: string }; Returns: void };
+      stop_recording: { Args: { _recording_id: string; _recording_url: string; _thumbnail_url: string; _duration_seconds: number; _file_size_bytes: number }; Returns: void };
+      mark_recording_failed: { Args: { _recording_id: string; _error_message: string }; Returns: void };
+      get_active_recording: { Args: { _session_id: string }; Returns: { id: string; status: string; started_at: string; paused_at: string | null; recording_url: string | null }[] };
+      get_channel_recordings: { Args: { _channel_id: string }; Returns: { id: string; session_id: string; status: string; recording_url: string | null; thumbnail_url: string | null; duration_seconds: number | null; file_size_bytes: number | null; created_at: string; completed_at: string | null }[] };
+      create_automation_playlist: { Args: { _channel_id: string; _name: string; _description: string | null }; Returns: string };
+      add_playlist_item: { Args: { _playlist_id: string; _content_id: string }; Returns: string };
+      create_automation_schedule: { Args: { _channel_id: string; _playlist_id: string; _trigger_type: string; _start_hour?: number; _start_minute?: number; _end_hour?: number; _end_minute?: number; _days_of_week?: number[]; _timezone?: string }; Returns: string };
+      start_automation_session: { Args: { _schedule_id: string; _room_name: string }; Returns: string };
+      update_automation_session: { Args: { _session_id: string; _status: string; _current_item_number?: number; _egress_id?: string }; Returns: void };
+      stop_automation_session: { Args: { _session_id: string }; Returns: void };
     };
     Enums: {
       app_role: 'admin' | 'moderator' | 'user';

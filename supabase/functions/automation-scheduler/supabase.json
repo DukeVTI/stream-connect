@@ -1,0 +1,6 @@
+verify_jwt = false
+
+# Cron configuration - runs every minute to check for scheduled automations
+[functions.automation-scheduler]
+events = ["crons"]
+cron = "* * * * *"

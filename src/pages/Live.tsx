@@ -9,6 +9,8 @@ import { LiveStreamControls } from '@/components/live/LiveStreamControls';
 import { LiveChat } from '@/components/live/LiveChat';
 import { LiveCallQueue } from '@/components/live/LiveCallQueue';
 import { LiveBadge } from '@/components/live/LiveBadge';
+import { SimulcastManager } from '@/components/live/SimulcastManager';
+import { RecordingControls } from '@/components/live/RecordingControls';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
@@ -175,7 +177,16 @@ export default function Live() {
           {/* Chat and Call Queue */}
           <div className="lg:col-span-1 space-y-4 h-[calc(100vh-12rem)]">
             {isPublisher && (
-              <LiveCallQueue sessionId={session.id} isPublisher={isPublisher} />
+              <>
+                <RecordingControls
+                  sessionId={session.id}
+                  roomName={session.livekit_room_name}
+                  channelId={session.channel_id}
+                  isPublisher={isPublisher}
+                />
+                <SimulcastManager sessionId={session.id} isPublisher={isPublisher} />
+                <LiveCallQueue sessionId={session.id} isPublisher={isPublisher} />
+              </>
             )}
             {!isPublisher && (
               <LiveCallQueue sessionId={session.id} isPublisher={isPublisher} />

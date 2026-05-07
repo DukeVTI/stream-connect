@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ThumbsUp, ThumbsDown, MessageSquare, Eye, Share2, Headphones, Flag, Pencil, Trash2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, Eye, Share2, Headphones, Flag, Pencil, Trash2, Settings } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,6 +62,9 @@ export default function Watch() {
     approve_disapprove_enabled: true
   });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   useEffect(() => {
     if (id) loadContent();
@@ -221,6 +224,13 @@ export default function Watch() {
     }
   };
 
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -250,9 +260,47 @@ export default function Watch() {
     <MainLayout>
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Player */}
-        <div className="aspect-video bg-muted rounded-xl overflow-hidden mb-4">
+        <div className="aspect-video bg-muted rounded-xl overflow-hidden mb-4 relative group">
           {content.content_type === 'video' && content.file_url ? (
-            <video src={content.file_url} controls className="w-full h-full" />
+            <div className="relative w-full h-full">
+              <video
+                ref={videoRef}
+                src={content.file_url}
+                controls
+                className="w-full h-full"
+                onLoadedData={() => {
+                  if (videoRef.current) {
+                    videoRef.current.playbackRate = playbackSpeed;
+                  }
+                }}
+              />
+              {/* Speed Control Overlay */}
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="relative">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="bg-black/70 text-white border-0 hover:bg-black/80 h-8 px-2"
+                  >
+                    <Settings className="h-3 w-3 mr-1" />
+                    {playbackSpeed}x
+                  </Button>
+                  <div className="absolute top-full right-0 mt-1 bg-black/90 text-white rounded-md p-1 min-w-[80px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                    {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+                      <button
+                        key={speed}
+                        onClick={() => handleSpeedChange(speed)}
+                        className={`block w-full text-left px-2 py-1 text-xs rounded hover:bg-white/20 ${
+                          playbackSpeed === speed ? 'bg-white/30 font-medium' : ''
+                        }`}
+                      >
+                        {speed}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : content.content_type === 'audio' && content.file_url ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/20 to-background">
               <Headphones className="h-20 w-20 text-primary" />

@@ -11,7 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LiveBadge } from '@/components/live/LiveBadge';
+import { PlaylistManagement } from '@/components/dashboard/PlaylistManagement';
+import { AudienceAnalytics } from '@/components/dashboard/AudienceAnalytics';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CHANNEL_CATEGORIES, CHANNEL_LANGUAGES } from '@/lib/constants';
@@ -32,6 +35,7 @@ export default function Dashboard() {
   const [pinInput, setPinInput] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [settingPin, setSettingPin] = useState(false);
+  const [selectedChannelForPlaylist, setSelectedChannelForPlaylist] = useState<Channel | null>(null);
 
   const photoRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -472,74 +476,128 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {channels.map((ch) => (
-              <Card key={ch.id} className="group">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onClick={() => navigate(`/channel/${ch.id}`)}>
-                      {ch.profile_photo_url ? (
-                        <img src={ch.profile_photo_url} alt={ch.name} className="h-12 w-12 rounded-full object-cover shrink-0" />
-                      ) : (
-                        <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0">
-                          {ch.name.charAt(0).toUpperCase()}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              {channels.map((ch) => (
+                <Card key={ch.id} className="group cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedChannelForPlaylist(ch)}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {ch.profile_photo_url ? (
+                          <img src={ch.profile_photo_url} alt={ch.name} className="h-12 w-12 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0">
+                            {ch.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold truncate">{ch.name}</h3>
+                            {ch.is_live && <LiveBadge />}
+                            {ch.is_first_channel && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <BadgeCheck className="h-3 w-3" /> Free Live
+                              </Badge>
+                            )}
+                            {!ch.livestream_eligible && !ch.is_first_channel && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
+                                <Lock className="h-3 w-3" /> No Livestream
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">@{ch.handle ?? '—'} · {ch.subscriber_count} subscribers</p>
+                          {ch.category && <Badge variant="secondary" className="mt-1 text-xs">{ch.category}</Badge>}
                         </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold truncate">{ch.name}</h3>
-                          {ch.is_live && <LiveBadge />}
-                          {ch.is_first_channel && (
-                            <Badge variant="secondary" className="text-xs gap-1">
-                              <BadgeCheck className="h-3 w-3" /> Free Live
-                            </Badge>
-                          )}
-                          {!ch.livestream_eligible && !ch.is_first_channel && (
-                            <Badge variant="outline" className="text-xs text-muted-foreground gap-1">
-                              <Lock className="h-3 w-3" /> No Livestream
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">@{ch.handle ?? '—'} · {ch.subscriber_count} subscribers</p>
-                        {ch.category && <Badge variant="secondary" className="mt-1 text-xs">{ch.category}</Badge>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Edit Channel"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditChannelDialog(ch);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Set Channel PIN"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPinDialog(ch.id);
+                          }}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChannel(ch.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Edit Channel"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditChannelDialog(ch);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Set Channel PIN"
-                        onClick={() => openPinDialog(ch.id)}
-                      >
-                        <KeyRound className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteChannel(ch.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {selectedChannelForPlaylist && (
+              <Card>
+                <CardContent className="pt-6">
+                  <Tabs defaultValue="automation" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="automation">Automation Playlists</TabsTrigger>
+                      <TabsTrigger value="analytics">Audience Analytics</TabsTrigger>
+                      <TabsTrigger value="details">Channel Details</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="automation" className="space-y-4">
+                      <PlaylistManagement
+                        channelId={selectedChannelForPlaylist.id}
+                        channelName={selectedChannelForPlaylist.name}
+                      />
+                    </TabsContent>
+                    <TabsContent value="analytics" className="space-y-4">
+                      <AudienceAnalytics channelId={selectedChannelForPlaylist.id} />
+                    </TabsContent>
+                    <TabsContent value="details">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Channel Name</p>
+                          <p className="font-medium">{selectedChannelForPlaylist.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Handle</p>
+                          <p className="font-medium">@{selectedChannelForPlaylist.handle}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Description</p>
+                          <p className="text-sm">{selectedChannelForPlaylist.description || 'No description'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Category</p>
+                          <p className="font-medium">{selectedChannelForPlaylist.category || 'Not specified'}</p>
+                        </div>
+                        <Button variant="outline" onClick={() => setSelectedChannelForPlaylist(null)}>
+                          Close
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </MainLayout>
