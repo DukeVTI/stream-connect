@@ -54,20 +54,43 @@ export function SimulcastManager({ sessionId, isPublisher = false }: SimulcastMa
 
   const loadPartnerships = async () => {
     try {
-      const { data, error } = await supabase
+      if (!user?.id) return;
+
+      // First, fetch user's channels
+      const { data: userChannels, error: channelsError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('owner_id', user.id);
+
+      if (channelsError) throw channelsError;
+      if (!userChannels || userChannels.length === 0) {
+        setPartnerships([]);
+        return;
+      }
+
+      const userChannelIds = userChannels.map(ch => ch.id);
+
+      // Build query filters safely
+      let query = supabase
         .from('simulcast_partnerships')
         .select(`
           *,
           primary_channel:channels!primary_channel_id(name, avatar_url),
           secondary_channel:channels!secondary_channel_id(name, avatar_url)
-        `)
-        .or(`primary_channel_id.in.(SELECT id FROM channels WHERE owner_id = '${user?.id}'),secondary_channel_id.in.(SELECT id FROM channels WHERE owner_id = '${user?.id}')`)
+        `);
+
+      // Filter for partnerships where user owns either channel
+      const { data, error } = await query
+        .or(
+          `primary_channel_id.in.(${userChannelIds.join(',')}),secondary_channel_id.in.(${userChannelIds.join(',')})`
+        )
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPartnerships(data || []);
     } catch (error) {
       console.error('Failed to load partnerships:', error);
+      toast.error('Failed to load partnerships');
     }
   };
 
@@ -87,12 +110,25 @@ export function SimulcastManager({ sessionId, isPublisher = false }: SimulcastMa
   };
 
   const requestSimulcast = async () => {
-    if (!selectedChannelId || !sessionId) return;
+    if (!selectedChannelId || !sessionId || !user?.id) return;
 
     setRequesting(true);
     try {
+      // Get the user's channel that owns this session
+      const { data: channelData, error: channelError } = await supabase
+        .from('channels')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1)
+        .single();
+
+      if (channelError || !channelData) {
+        toast.error('Could not find your channel');
+        return;
+      }
+
       const { error } = await supabase.rpc('request_simulcast_partnership', {
-        _primary_channel_id: sessionId, // This should be the channel ID, not session ID
+        _primary_channel_id: channelData.id, // Use the actual channel ID, not session ID
         _secondary_channel_id: selectedChannelId,
       });
 
@@ -104,6 +140,7 @@ export function SimulcastManager({ sessionId, isPublisher = false }: SimulcastMa
       await loadPartnerships();
     } catch (error) {
       toast.error('Failed to request simulcast');
+      console.error('Simulcast request error:', error);
     } finally {
       setRequesting(false);
     }
